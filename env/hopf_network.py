@@ -103,10 +103,27 @@ class HopfNetwork():
     """ For coupling oscillators in phase space. 
     [TODO] update all coupling matrices
     """
-    self.PHI_trot = np.array([[1,1,0,0],[0,0,-1,-1],[0,0,-1,-1],[1,1,0,0]])
-    self.PHI_walk = np.array([[1,0,0,1],[0,0,1,0],[0,0,0,1],[1,1,1,0]]) ##à checker, cf Ipad
-    self.PHI_bound = np.array([[1,1,0,0],[1,1,0,0],[0,0,-1,-1],[0,0,-1,-1]])
-    self.PHI_pace = np.array([[1,0,1,0],[1,0,1,0],[0,-1,0,-1],[0,-1,0,-1]]) #à checker
+    self.PHI_trot = np.pi*np.array([[0,-1,-1,0],
+                                    [1,0,0,1],
+                                    [1,0,0,1],
+                                    [0,-1,-1,0]])
+    
+    self.PHI_walk = np.pi*np.array([[0, -1,-1/2,1/2],
+                                    [1,0,1/2,3/2],
+                                    [1/2,-1/2,0,1],
+                                    [-1/2,-3/2,-1,0]]) 
+    
+    self.PHI_bound = np.pi*np.array([[0,0,-1,-1],
+                                     [0,0,-1,-1],
+                                     [1,1,0,0],
+                                     [1,1,0,0]])
+    
+    self.PHI_pace = np.pi*np.array([[0,-1,0,-1],
+                                    [1,0,1,0],
+                                    [0,-1,0,-1],
+                                    [1,0,1,0]])
+
+    
 
     if gait == "TROT":
       self.PHI = self.PHI_trot
