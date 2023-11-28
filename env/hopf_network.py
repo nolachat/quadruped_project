@@ -151,11 +151,11 @@ class HopfNetwork():
     z = np.zeros(4) # [TODO/]
 
     for i in range(4):
-      x[i] =  - self.des_step_len * self.get_r[i] * np.cos(self.get_theta[i])
-      if np.sin(self.get_theta[i]) > 0:
-        z[i] = -self._robot_height + self._ground_clearance * np.sin(self.get_theta[i])
+      x[i] =  - self._des_step_len * self.get_r()[i] * np.cos(self.get_theta()[i])
+      if np.sin(self.get_theta()[i]) > 0:
+        z[i] = -self._robot_height + self._ground_clearance * np.sin(self.get_theta()[i])
       else:
-        z[i] = -self._robot_height + self._ground_penetration * np.sin(self.get_theta[i])
+        z[i] = -self._robot_height + self._ground_penetration * np.sin(self.get_theta()[i])
 
     # scale x by step length
     if not self.use_RL:
@@ -178,14 +178,14 @@ class HopfNetwork():
     # loop through each leg's oscillator
     for i in range(4):
       # get r_i, theta_i from X
-      r, theta = self.get_r, self.get_theta # [TODO/]
+      r, theta = self.get_r(), self.get_theta() # [TODO/]
       # compute r_dot (Equation 6)
-      r_dot = self.alpha * (self.mu - r[i]**2)*r[i] # [TODO/]
+      r_dot = self._alpha * (self._mu - r[i]**2)*r[i] # [TODO/]
       
       # determine whether oscillator i is in swing or stance phase to set natural frequency omega_swing or omega_stance (see Section 3)
-      if theta[i] >= 0 and theta[i] <= np.PI:
+      if theta[i] >= 0 and theta[i] <= np.pi:
         omega  = self._omega_swing
-      elif theta[i] > np.PI and theta[i] <= 2*np.PI:
+      elif theta[i] > np.pi and theta[i] <= 2*np.pi:
         omega  = self._omega_stance 
 
       theta_dot = omega # [TODO/]
@@ -243,7 +243,7 @@ class HopfNetwork():
       # get r_i, theta_i from X
       r, theta = X[:,i]
       # amplitude (use mu from RL, i.e. self._mu_rl[i])
-      r_dot = self.alpha * (self._mu_rl[i] - r[i]**2)*r[i]  # [TODO/]
+      r_dot = self._alpha * (self._mu_rl[i] - r[i]**2)*r[i]  # [TODO/]
       # phase (use omega from RL, i.e. self._omega_rl[i])
       theta_dot = self._omega_rl[i] # [TODO///////////////////////////]
 
