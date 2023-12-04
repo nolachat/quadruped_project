@@ -203,8 +203,6 @@ class HopfNetwork():
     self.X_dot = X_dot
     # mod phase variables to keep between 0 and 2pi
     self.X[1,:] = self.X[1,:] % (2*np.pi)
-    print(self.X[0,0])
-
 
   ###################### Helper functions for accessing CPG States
   def get_r(self):

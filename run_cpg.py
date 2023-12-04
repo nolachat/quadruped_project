@@ -52,7 +52,7 @@ foot_y = 0.0838 # this is the hip length
 sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
 
 env = QuadrupedGymEnv(render=True,              # visualize
-                    on_rack=True,              # useful for debugging! 
+                    on_rack=False,              # useful for debugging! 
                     isRLGymInterface=False,     # not using RL
                     time_step=TIME_STEP,
                     action_repeat=1,
@@ -63,7 +63,8 @@ env = QuadrupedGymEnv(render=True,              # visualize
 
 # initialize Hopf Network, supply gait
 # cpg = HopfNetwork(time_step=TIME_STEP)
-cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT")
+gait = "BOUND"
+cpg = HopfNetwork(time_step=TIME_STEP, gait=gait)
 
 
 TEST_STEPS = int(2 / (TIME_STEP))
@@ -133,18 +134,38 @@ def legID_Name(legID):
 PlOT_STEPS = int(1.2 // (TIME_STEP))
 START_STEP = int(0 // (TIME_STEP))
 
-# Create four subplots
-fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+# # Create four subplots
+# fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
 
-# Plot each vector in a separate subplot
+# # Plot each vector in a separate subplot
+# for i in range(4):
+#     axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes[i, START_STEP:PlOT_STEPS], label=f'Amplitude $r$')
+#     axes[i].plot(t[START_STEP:PlOT_STEPS], phases[i, START_STEP:PlOT_STEPS], label=f'Phase $\\theta$ ')
+#     axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes_derivative[i, START_STEP:PlOT_STEPS], label=f'Amplitude Derivative $\\dot{{r}}$')
+#     axes[i].plot(t[START_STEP:PlOT_STEPS], phases_derivative[i, START_STEP:PlOT_STEPS], label=f'Phase Derivative $\\dot{{\\theta}}$')
+#     axes[i].set_ylabel(f'{legID_Name(i)}')
+
+# axes[3].set_xlabel('Time')
+# plt.legend()
+# plt.suptitle(f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$) for a {gait} gait', fontsize=16)
+# plt.show()
+
+# Create subplots
+fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+
+# Flatten the axes array for easier indexing
+axes = axes.flatten()
+
+# Plot positions on each subplot
 for i in range(4):
-    axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes[i, START_STEP:PlOT_STEPS], label=f'Amplitude {i + 1}')
-    axes[i].plot(t[START_STEP:PlOT_STEPS], phases[i, START_STEP:PlOT_STEPS], label=f'Phase {i + 1}')
-    axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes_derivative[i, START_STEP:PlOT_STEPS], label=f'Amplitude Derivative {i + 1}')
-    axes[i].plot(t[START_STEP:PlOT_STEPS], phases_derivative[i, START_STEP:PlOT_STEPS], label=f'Phase Derivative {i + 1}')
-    axes[i].set_ylabel(f'{legID_Name(i)}')
+    x = amplitudes[i, :] * np.cos(phases[i, :])
+    y = amplitudes[i, :] * np.sin(phases[i, :])
 
-axes[3].set_xlabel('Time')
-plt.suptitle('CPG states ($r, \\theta, \dot{r}, \dot{\\theta}$) for a trot gait', fontsize=16)
-plt.legend()
+    axes[i].plot(x, y)
+    axes[i].set_title(legID_Name(i))
+    axes[i].set_ylabel(r'$Y = r \cdot \sin({\theta})$')
+    axes[i].set_xlabel(r'$X = r \cdot \cos({\theta})$')
+
+plt.suptitle(f'Position Plots for Each Amplitude and Phase Pair with gait: {gait}', fontsize=16)
+plt.tight_layout()
 plt.show()
