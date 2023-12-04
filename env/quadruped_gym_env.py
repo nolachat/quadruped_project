@@ -254,7 +254,11 @@ class QuadrupedGymEnv(gym.Env):
       # [TODO] Get observation from robot. What are reasonable measurements we could get on hardware?
       # if using the CPG, you can include states with self._cpg.get_r(), for example
       # 50 is arbitrary
-      self._observation = np.zeros(50)
+      self._observation = np.concatenate((self._cpg.get_r(), 
+                                          self._cpg.get_theta(),
+                                          self._cpg.get_dr(),
+                                          self._cpg.get_dtheta(),
+                                          self.get_distance_and_angle_to_goal() ))
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -417,14 +421,15 @@ class QuadrupedGymEnv(gym.Env):
     for i in range(4):
       # get Jacobian and foot position in leg frame for leg i (see ComputeJacobianAndPosition() in quadruped.py)
       # [TODO]
+      J, pos = self.ComputeJacobianAndPosition(i)
       # desired foot position i (from RL above)
-      Pd = np.zeros(3) # [TODO]
-      # desired foot velocity i
-      vd = np.zeros(3) 
+      Pd = des_foot_pos[i] # [TODO]
+      # desired foot velocity i 
+      vd = J @ qd # Why desired, when we only have current velocity?
       # foot velocity in leg frame i (Equation 2)
       # [TODO]
       # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-      tau = np.zeros(3) # [TODO]
+      tau = J.T @ (kpCartesian @ (Pd-pos) + kdCartesian @ ( - J @ qd )) # [TODO]
 
       action[3*i:3*i+3] = tau
 
