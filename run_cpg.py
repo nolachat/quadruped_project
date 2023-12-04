@@ -52,7 +52,7 @@ foot_y = 0.0838 # this is the hip length
 sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
 
 env = QuadrupedGymEnv(render=True,              # visualize
-                    on_rack=False,              # useful for debugging! 
+                    on_rack=True,              # useful for debugging! 
                     isRLGymInterface=False,     # not using RL
                     time_step=TIME_STEP,
                     action_repeat=1,
@@ -66,7 +66,7 @@ env = QuadrupedGymEnv(render=True,              # visualize
 cpg = HopfNetwork(time_step=TIME_STEP, gait="TROT")
 
 
-TEST_STEPS = int(4 / (TIME_STEP))
+TEST_STEPS = int(2 / (TIME_STEP))
 t = np.arange(TEST_STEPS)*TIME_STEP
 
 # [/TODO] initialize data structures to save CPG and robot states
@@ -101,7 +101,7 @@ for j in range(TEST_STEPS):
     # call inverse kinematics to get corresponding joint angles (see ComputeInverseKinematics() in quadruped.py)
     leg_q = env.robot.ComputeInverseKinematics(i,leg_xyz) # [/TODO] 
     # Add joint PD contribution to tau for leg i (Equation 4)
-    tau += kp * (leg_q-q[3*i:3*i+3]) + kd * (-dq[3*i:3*i+3])# [/TODO] 
+    tau =tau+ kp * (leg_q-q[3*i:3*i+3]) + kd * (-dq[3*i:3*i+3])# [/TODO] 
     # add Cartesian PD contribution
     if ADD_CARTESIAN_PD:
       # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
@@ -109,7 +109,7 @@ for j in range(TEST_STEPS):
       # Get current foot velocity in leg frame (Equation 2)
       v = J @ dq[3*i:3*i+3] # [TODO] 
       # Calculate torque contribution from Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-      tau += J @ (np.matmul(kpCartesian,(leg_xyz-pos))+np.matmul(kdCartesian,(-v))) # [/TODO]
+      tau =tau+ J.T @ (np.matmul(kpCartesian,(leg_xyz-pos))+np.matmul(kdCartesian,(-v))) # [/TODO]
   
     action[3*i:3*i+3] = tau
 
@@ -131,7 +131,7 @@ def legID_Name(legID):
   return leg_names.get(legID, "Leg ID not matching")
 
 PlOT_STEPS = int(1.2 // (TIME_STEP))
-START_STEP = int(0.2 // (TIME_STEP))
+START_STEP = int(0 // (TIME_STEP))
 
 # Create four subplots
 fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
