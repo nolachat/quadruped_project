@@ -254,6 +254,7 @@ class QuadrupedGymEnv(gym.Env):
       # [TODO] Get observation from robot. What are reasonable measurements we could get on hardware?
       # if using the CPG, you can include states with self._cpg.get_r(), for example
       # 50 is arbitrary
+
       self._observation = np.concatenate((self._cpg.get_r(), 
                                           self._cpg.get_theta(),
                                           self._cpg.get_dr(),
@@ -423,14 +424,15 @@ class QuadrupedGymEnv(gym.Env):
       # [TODO]
       J, pos = self.ComputeJacobianAndPosition(i)
       # desired foot position i (from RL above)
-      Pd = des_foot_pos[i] # [TODO]
+      Pd = des_foot_pos[3*i:3*i+3] # [TODO]
       # desired foot velocity i 
       # vd = J @ self.ComputeInverseKinematics(i, Pd) @ qd
-      # vd = J @ qd ?
+      vd =  np.zeros(3)
       # foot velocity in leg frame i (Equation 2)
       # [TODO]
+      v = J @ qd[3*i:3*i+3]
       # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-      tau = J.T @ (kpCartesian @ (Pd-pos) + kdCartesian @ ( - J @ qd )) # [TODO]
+      tau = J.T @ (kpCartesian @ (Pd-pos) + kdCartesian @ (vd-v)) # [TODO]
 
       action[3*i:3*i+3] = tau
 
@@ -471,12 +473,12 @@ class QuadrupedGymEnv(gym.Env):
       z = zs[i]
 
       # call inverse kinematics to get corresponding joint angles
-      q_des = self.ComputeInverseKinematics(i, [x,y,z]) # [TODO]
+      q_des = self.robot.ComputeInverseKinematics(i, [x,y,z]) # [TODO]
       # Add joint PD contribution to tau
-      tau = kp @ (q_des - q[i]) + kd @ (-dq[i]) # [TODO] 
+      tau = kp @ (q_des - q[3*i:3*i+3]) + kd @ (-dq[3*i:3*i+3]) # [TODO] 
 
       # add Cartesian PD contribution (as you wish)
-      # tau +=
+      tau += self.ScaleActionToCartesianPos(actions)[3*i:3*i+3]
 
       action[3*i:3*i+3] = tau
 
