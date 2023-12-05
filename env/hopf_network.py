@@ -246,6 +246,11 @@ class HopfNetwork():
       # phase (use omega from RL, i.e. self._omega_rl[i])
       theta_dot = self._omega_rl[i] # [TODO///////////////////////////]
 
+      if self._couple:
+        for j in range(4):
+          theta_dot += X[0,j]* self._coupling_strength * np.sin(X[1,j]-theta-self.PHI[i][j]) # [TODO/]
+
+
       X_dot[:,i] = [r_dot, theta_dot]
 
     # integrate 

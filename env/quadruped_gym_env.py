@@ -224,8 +224,11 @@ class QuadrupedGymEnv(gym.Env):
       # [TODO] Set observation upper and lower ranges. What are reasonable limits? 
       # Note 50 is arbitrary below, you may have more or less
       # if using CPG-RL, remember to include limits on these
-      observation_high = (np.zeros(50) + OBSERVATION_EPS)
-      observation_low = (np.zeros(50) -  OBSERVATION_EPS)
+      #observation_high = (np.zeros(50) + OBSERVATION_EPS)
+      #observation_low = (np.zeros(50) -  OBSERVATION_EPS)
+      observation_high = (np.concatenate([1/8]*4, [2*np.pi]*4, [20/8]*4, [3*np.pi]*4, np.sqrt(2)*(6-0.5), np.pi) + OBSERVATION_EPS)
+      observation_low = (np.concatenate([0]*4, [0]*4, [-20/8]*4, [-3*np.pi]*4, 0, 0) - OBSERVATION_EPS)
+
     else:
       raise ValueError("observation space not defined or not intended")
 
@@ -364,7 +367,11 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self):
     """ Implement your reward function here. How will you improve upon the above? """
     # [TODO] add your reward function. 
-    return 0
+
+    reward = self._reward_fwd_locomotion(0.5)
+
+
+    return reward
 
   def _reward(self):
     """ Get reward depending on task"""
@@ -863,8 +870,8 @@ class QuadrupedGymEnv(gym.Env):
 
 def test_env():
   env = QuadrupedGymEnv(render=True, 
-                        on_rack=True,
-                        motor_control_mode='PD',
+                        on_rack=False,
+                        motor_control_mode='CPG',
                         action_repeat=100,
                         )
 
