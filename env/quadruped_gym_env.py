@@ -425,7 +425,8 @@ class QuadrupedGymEnv(gym.Env):
       # desired foot position i (from RL above)
       Pd = des_foot_pos[i] # [TODO]
       # desired foot velocity i 
-      vd = J @ qd # Why desired, when we only have current velocity?
+      # vd = J @ self.ComputeInverseKinematics(i, Pd) @ qd
+      # vd = J @ qd ?
       # foot velocity in leg frame i (Equation 2)
       # [TODO]
       # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
@@ -470,9 +471,9 @@ class QuadrupedGymEnv(gym.Env):
       z = zs[i]
 
       # call inverse kinematics to get corresponding joint angles
-      q_des = np.zeros(3) # [TODO]
+      q_des = self.ComputeInverseKinematics(i, [x,y,z]) # [TODO]
       # Add joint PD contribution to tau
-      tau = np.zeros(3) # [TODO] 
+      tau = kp @ (q_des - q[i]) + kd @ (-dq[i]) # [TODO] 
 
       # add Cartesian PD contribution (as you wish)
       # tau +=
