@@ -121,7 +121,7 @@ class QuadrupedGymEnv(gym.Env):
       action_repeat=10,  
       distance_weight=2,
       energy_weight=0.008,
-      motor_control_mode="PD",
+      motor_control_mode="CPG",
       task_env="FWD_LOCOMOTION",
       observation_space_mode="DEFAULT",
       on_rack=False,
@@ -224,9 +224,8 @@ class QuadrupedGymEnv(gym.Env):
       # [TODO] Set observation upper and lower ranges. What are reasonable limits? 
       # Note 50 is arbitrary below, you may have more or less
       # if using CPG-RL, remember to include limits on these
-      #observation_high = (np.zeros(50) + OBSERVATION_EPS)
-      #observation_low = (np.zeros(50) -  OBSERVATION_EPS)
-      observation_high = (np.concatenate([1/8]*4, [2*np.pi]*4, [20/8]*4, [3*np.pi]*4, np.sqrt(2)*(6-0.5), np.pi) + OBSERVATION_EPS)
+      # [R,Theta, R_dot, Theta_dot, d_goal, Theat_goal]
+      observation_high = (np.concatenate([1]*4, [2*np.pi]*4, [20/8]*4, [3*np.pi]*4, np.sqrt(2)*(6-0.5), np.pi) + OBSERVATION_EPS)
       observation_low = (np.concatenate([0]*4, [0]*4, [-20/8]*4, [-3*np.pi]*4, 0, 0) - OBSERVATION_EPS)
 
     else:
@@ -368,7 +367,10 @@ class QuadrupedGymEnv(gym.Env):
     """ Implement your reward function here. How will you improve upon the above? """
     # [TODO] add your reward function. 
 
-    reward = self._reward_fwd_locomotion(0.5)
+    target_speed = 0.5
+    reward = self._reward_fwd_locomotion(target_speed)
+
+    # reward = self._reward_fwd_locomotion(target_speed) + self._reward_flag_run()
 
 
     return reward
@@ -482,10 +484,7 @@ class QuadrupedGymEnv(gym.Env):
       # call inverse kinematics to get corresponding joint angles
       q_des = self.robot.ComputeInverseKinematics(i, [x,y,z]) # [TODO]
       # Add joint PD contribution to tau
-      tau = kp @ (q_des - q[3*i:3*i+3]) + kd @ (-dq[3*i:3*i+3]) # [TODO] 
-
-      # add Cartesian PD contribution (as you wish)
-      tau += self.ScaleActionToCartesianPos(actions)[3*i:3*i+3]
+      tau = np.diag(kp[3*i:3*i+3]) @ (q_des - q[3*i:3*i+3]) + kd[3*i:3*i+3] @ (-dq[3*i:3*i+3]) # [TODO] 
 
       action[3*i:3*i+3] = tau
 
