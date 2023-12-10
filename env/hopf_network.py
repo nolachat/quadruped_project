@@ -242,7 +242,7 @@ class HopfNetwork():
       # get r_i, theta_i from X
       r, theta = X[:,i]
       # amplitude (use mu from RL, i.e. self._mu_rl[i])
-      r_dot = self._alpha * (self._mu_rl[i] - r[i]**2)*r[i]  # [TODO/]
+      r_dot = self._alpha * (self._mu_rl[i] - r**2)*r  # [TODO/]
       # phase (use omega from RL, i.e. self._omega_rl[i])
       theta_dot = self._omega_rl[i] # [TODO///////////////////////////]
 

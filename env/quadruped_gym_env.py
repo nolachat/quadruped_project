@@ -413,11 +413,14 @@ class QuadrupedGymEnv(gym.Env):
     """
     # clip RL actions to be between -1 and 1 (standard RL technique)
     u = np.clip(actions,-1,1)
+    u_mapped = np.zeros(12)
+    u_mapped[0::3] = u[0::2]  # Map first value of each leg to x
+    u_mapped[1::3] = u[1::2]
     # scale to corresponding desired foot positions (i.e. ranges in x,y,z we allow the agent to choose foot positions)
     # [TODO: edit (do you think these should these be increased? How limiting is this?)]
     scale_array = np.array([0.1, 0.05, 0.08]*4)
     # add to nominal foot position in leg frame (what are the final ranges?)
-    des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME + scale_array*u
+    des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME + scale_array*u_mapped
 
     # get Cartesian kp and kd gains (can be modified)
     kpCartesian = self._robot_config.kpCartesian
@@ -429,7 +432,7 @@ class QuadrupedGymEnv(gym.Env):
     for i in range(4):
       # get Jacobian and foot position in leg frame for leg i (see ComputeJacobianAndPosition() in quadruped.py)
       # [TODO]
-      J, pos = self.ComputeJacobianAndPosition(i)
+      J, pos = self.robot.ComputeJacobianAndPosition(i)
       # desired foot position i (from RL above)
       Pd = des_foot_pos[3*i:3*i+3] # [TODO]
       # desired foot velocity i 
@@ -482,7 +485,7 @@ class QuadrupedGymEnv(gym.Env):
       # call inverse kinematics to get corresponding joint angles
       q_des = self.robot.ComputeInverseKinematics(i, [x,y,z]) # [TODO]
       # Add joint PD contribution to tau
-      tau = kp @ (q_des - q[3*i:3*i+3]) + kd @ (-dq[3*i:3*i+3]) # [TODO] 
+      tau = kp[3*i:3*i+3] @ (q_des - q[3*i:3*i+3]) + kd[3*i:3*i+3] @ (-dq[3*i:3*i+3]) # [TODO] 
 
       # add Cartesian PD contribution (as you wish)
       tau += self.ScaleActionToCartesianPos(actions)[3*i:3*i+3]
