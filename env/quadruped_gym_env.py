@@ -225,8 +225,14 @@ class QuadrupedGymEnv(gym.Env):
       # Note 50 is arbitrary below, you may have more or less
       # if using CPG-RL, remember to include limits on these
       # [R,Theta, R_dot, Theta_dot, d_goal, Theat_goal]
-      observation_high = (np.concatenate([1]*4, [2*np.pi]*4, [20/8]*4, [3*np.pi]*4, np.sqrt(2)*(6-0.5), np.pi) + OBSERVATION_EPS)
-      observation_low = (np.concatenate([0]*4, [0]*4, [-20/8]*4, [-3*np.pi]*4, 0, 0) - OBSERVATION_EPS)
+      observation_high = (np.concatenate([1]*4, [2*np.pi]*4, [20/8]*4, [3*np.pi]*4, np.sqrt(2)*(6-0.5), np.pi,
+                                        self._robot_config.UPPER_ANGLE_JOINT,
+                                        self._robot_config.VELOCITY_LIMITS,
+                                         np.array([1.0]*4), 4,4,[1]*4,[10*5]*4,[1]*4) + OBSERVATION_EPS)
+      observation_low = (np.concatenate([0]*4, [0]*4, [-20/8]*4, [-3*np.pi]*4, 0, 0,
+                                        self._robot_config.LOWER_ANGLE_JOINT,
+                                        -self._robot_config.VELOCITY_LIMITS,
+                                         np.array([-1.0]*4),0,0,[0]*4,[0]*4) - OBSERVATION_EPS)
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -261,7 +267,12 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_theta(),
                                           self._cpg.get_dr(),
                                           self._cpg.get_dtheta(),
-                                          self.get_distance_and_angle_to_goal() ))
+                                          self.get_distance_and_angle_to_goal(),
+                                          self.robot.GetMotorAngles(), 
+                                          self.robot.GetMotorVelocities(),
+                                          self.robot.GetBaseOrientation(),
+                                          self.robot.GetContactInfo()
+                                          ))
 
     else:
       raise ValueError("observation space not defined or not intended")
