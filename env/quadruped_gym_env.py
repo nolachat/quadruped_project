@@ -226,7 +226,7 @@ class QuadrupedGymEnv(gym.Env):
       # if using CPG-RL, remember to include limits on these
       #observation_high = (np.zeros(50) + OBSERVATION_EPS)
       #observation_low = (np.zeros(50) -  OBSERVATION_EPS)
-      observation_high = (np.concatenate([1/8]*4, [2*np.pi]*4, [20/8]*4, [3*np.pi]*4, np.sqrt(2)*(6-0.5), np.pi) + OBSERVATION_EPS)
+      observation_high = (np.concatenate(1*4, [2*np.pi]*4, [20/8]*4, [3*np.pi]*4, np.sqrt(2)*(6-0.5), np.pi) + OBSERVATION_EPS)
       observation_low = (np.concatenate([0]*4, [0]*4, [-20/8]*4, [-3*np.pi]*4, 0, 0) - OBSERVATION_EPS)
 
     else:
@@ -258,7 +258,10 @@ class QuadrupedGymEnv(gym.Env):
       # if using the CPG, you can include states with self._cpg.get_r(), for example
       # 50 is arbitrary
 
-      self._observation = np.concatenate((self._cpg.get_r(), 
+      self._observation = np.concatenate((self.robot.GetMotorAngles(), 
+                                          self.robot.GetMotorVelocities(),
+                                          self.robot.GetBaseOrientation(),
+                                          self._cpg.get_r(), 
                                           self._cpg.get_theta(),
                                           self._cpg.get_dr(),
                                           self._cpg.get_dtheta(),
