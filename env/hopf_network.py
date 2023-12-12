@@ -240,16 +240,11 @@ class HopfNetwork():
     # loop through each leg's oscillator, find current velocities
     for i in range(4):
       # get r_i, theta_i from X
-      r, theta = X[:,i]
+      r, theta = X[0,i],X[1,i]
       # amplitude (use mu from RL, i.e. self._mu_rl[i])
       r_dot = self._alpha * (self._mu_rl[i] - r**2)*r  # [TODO/]
       # phase (use omega from RL, i.e. self._omega_rl[i])
       theta_dot = self._omega_rl[i] # [TODO///////////////////////////]
-
-      if self._couple:
-        for j in range(4):
-          theta_dot += X[0,j]* self._coupling_strength * np.sin(X[1,j]-theta-self.PHI[i][j]) # [TODO/]
-
 
       X_dot[:,i] = [r_dot, theta_dot]
 
