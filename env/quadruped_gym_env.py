@@ -121,7 +121,7 @@ class QuadrupedGymEnv(gym.Env):
       action_repeat=10,  
       distance_weight=2,
       energy_weight=0.008,
-      motor_control_mode="CPG",
+      motor_control_mode="CARTESIAN_PD",
       task_env="FWD_LOCOMOTION",
       observation_space_mode="DEFAULT",
       on_rack=False,
@@ -485,6 +485,7 @@ class QuadrupedGymEnv(gym.Env):
       q_des = self.robot.ComputeInverseKinematics(i, [x,y,z]) # [TODO]
       # Add joint PD contribution to tau
       tau = np.diag(kp[3*i:3*i+3]) @ (q_des - q[3*i:3*i+3]) + kd[3*i:3*i+3] @ (-dq[3*i:3*i+3]) # [TODO] 
+      # Eventuellement un cartesian PD
 
       action[3*i:3*i+3] = tau
 
