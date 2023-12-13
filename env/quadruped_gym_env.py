@@ -227,9 +227,11 @@ class QuadrupedGymEnv(gym.Env):
                                          self._robot_config.VELOCITY_LIMITS,
                                          np.array([1.0]*4),
 
-                                          np.array([2]*4), np.array([2*np.pi]*4), np.array([50]*4), np.array([3*np.pi]*4)
+                                          np.array([2]*4), np.array([2*np.pi]*4), 
+                                          
+                                          # np.array([50]*4), np.array([3*np.pi]*4)
 
-                                          ,
+                                          # ,
                                           np.array([np.sqrt(2)*(6-0.5), np.pi])
 
                                             )) + OBSERVATION_EPS)
@@ -238,9 +240,11 @@ class QuadrupedGymEnv(gym.Env):
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1.0]*4),
 
-                                         np.array([0]*4), np.array([0]*4), np.array([-20/8]*4), np.array([-3*np.pi]*4)
+                                         np.array([0]*4), np.array([0]*4), 
                                          
-                                         ,
+                                        #  np.array([-20/8]*4), np.array([-3*np.pi]*4)
+                                         
+                                        #  ,
                                          np.array([0, 0]) 
 
                                          )) - OBSERVATION_EPS)
@@ -279,9 +283,9 @@ class QuadrupedGymEnv(gym.Env):
                                           self.robot.GetBaseOrientation(),
                                           self._cpg.get_r(), 
                                           self._cpg.get_theta(),
-                                          self._cpg.get_dr(),
-                                          self._cpg.get_dtheta()
-                                          ,
+                                          # self._cpg.get_dr(),
+                                          # self._cpg.get_dtheta()
+                                          # ,
                                           self.get_distance_and_angle_to_goal()
                                             ))
 

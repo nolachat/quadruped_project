@@ -48,7 +48,7 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 LEARNING_ALG = "PPO" # or "SAC"
 LOAD_NN = False # if you want to initialize training with a previous model 
 NUM_ENVS = 1    # how many pybullet environments to create for data collection
-USE_GPU = True # make sure to install all necessary drivers 
+USE_GPU = False # make sure to install all necessary drivers 
 
 #LEARNING_ALG = "SAC";  
 #USE_GPU = True
