@@ -220,14 +220,24 @@ class QuadrupedGymEnv(gym.Env):
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1.0]*4))) -  OBSERVATION_EPS)
+      
     elif self._observation_space_mode == "LR_COURSE_OBS":
-      # [TODO] Set observation upper and lower ranges. What are reasonable limits? 
-      # Note 50 is arbitrary below, you may have more or less
-      # if using CPG-RL, remember to include limits on these
-      #observation_high = (np.zeros(50) + OBSERVATION_EPS)
-      #observation_low = (np.zeros(50) -  OBSERVATION_EPS)
-      observation_high = (np.concatenate(1*4, [2*np.pi]*4, [20/8]*4, [3*np.pi]*4, np.sqrt(2)*(6-0.5), np.pi) + OBSERVATION_EPS)
-      observation_low = (np.concatenate([0]*4, [0]*4, [-20/8]*4, [-3*np.pi]*4, 0, 0) - OBSERVATION_EPS)
+
+      observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
+                                         self._robot_config.VELOCITY_LIMITS,
+                                         np.array([1.0]*4),
+
+                                          np.array([2]*4), np.array([2*np.pi]*4), np.array([50]*4), np.array([3*np.pi]*4), 
+
+                                          np.array([np.sqrt(2)*(6-0.5), np.pi]) )) + OBSERVATION_EPS)
+      
+      observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
+                                         -self._robot_config.VELOCITY_LIMITS,
+                                         np.array([-1.0]*4),
+
+                                         np.array([0]*4), np.array([0]*4), np.array([-20/8]*4), np.array([-3*np.pi]*4), 
+                                         
+                                         np.array([0, 0]) )) - OBSERVATION_EPS)
 
     else:
       raise ValueError("observation space not defined or not intended")

@@ -56,7 +56,9 @@ USE_GPU = False # make sure to install all necessary drivers
 # env_configs = {"motor_control_mode":"CPG",
 #                "task_env": "FLAGRUN", #  "LR_COURSE_TASK",
 #                "observation_space_mode": "LR_COURSE_OBS"}
-env_configs = {}
+env_configs = {"motor_control_mode":"CPG",
+               "task_env": "LR_COURSE_TASK", #  "LR_COURSE_TASK",
+               "observation_space_mode": "LR_COURSE_OBS"}
 
 if USE_GPU and LEARNING_ALG=="SAC":
     gpu_arg = "auto" 
