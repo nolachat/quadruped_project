@@ -227,18 +227,22 @@ class QuadrupedGymEnv(gym.Env):
                                          self._robot_config.VELOCITY_LIMITS,
                                          np.array([1.0]*4),
 
-                                          np.array([2]*4), np.array([2*np.pi]*4), np.array([50]*4), np.array([3*np.pi]*4) #, 
+                                          np.array([2]*4), np.array([2*np.pi]*4), np.array([50]*4), np.array([3*np.pi]*4)
 
-                                          # np.array([np.sqrt(2)*(6-0.5), np.pi])
+                                          ,
+                                          np.array([np.sqrt(2)*(6-0.5), np.pi])
+
                                             )) + OBSERVATION_EPS)
       
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1.0]*4),
 
-                                         np.array([0]*4), np.array([0]*4), np.array([-20/8]*4), np.array([-3*np.pi]*4), 
+                                         np.array([0]*4), np.array([0]*4), np.array([-20/8]*4), np.array([-3*np.pi]*4)
                                          
-                                        #  np.array([0, 0]) 
+                                         ,
+                                         np.array([0, 0]) 
+
                                          )) - OBSERVATION_EPS)
 
     else:
@@ -276,8 +280,9 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_r(), 
                                           self._cpg.get_theta(),
                                           self._cpg.get_dr(),
-                                          self._cpg.get_dtheta() #,
-                                          # self.get_distance_and_angle_to_goal()
+                                          self._cpg.get_dtheta()
+                                          ,
+                                          self.get_distance_and_angle_to_goal()
                                             ))
 
     else:
@@ -501,7 +506,7 @@ class QuadrupedGymEnv(gym.Env):
       tau = kp[3*i:3*i+3] @ (q_des - q[3*i:3*i+3]) + kd[3*i:3*i+3] @ (-dq[3*i:3*i+3]) # [TODO] 
 
       # add Cartesian PD contribution (as you wish)
-      
+
       action[3*i:3*i+3] = tau
 
     return action
@@ -537,7 +542,9 @@ class QuadrupedGymEnv(gym.Env):
     if self._termination() or self.get_sim_time() > self._MAX_EP_LEN:
       done = True
 
-    if "FLAGRUN" in self._TASK_ENV:
+    # if "FLAGRUN" in self._TASK_ENV:
+    
+    if "FLAGRUN" in self._TASK_ENV or "LR_COURSE_TASK" in self._TASK_ENV :
       dist_to_goal, _ = self.get_distance_and_angle_to_goal()
       if dist_to_goal < 0.5:
         self._reset_goal()
@@ -586,7 +593,8 @@ class QuadrupedGymEnv(gym.Env):
         self._add_base_mass_offset()
 
 
-      if self._TASK_ENV == "FLAGRUN":
+      # if self._TASK_ENV == "FLAGRUN" :
+      if self._TASK_ENV == "FLAGRUN" or self._TASK_ENV == "LR_COURSE_TASK" :  
         self.goal_id = None
         self._reset_goal()
 
