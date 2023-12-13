@@ -227,9 +227,10 @@ class QuadrupedGymEnv(gym.Env):
                                          self._robot_config.VELOCITY_LIMITS,
                                          np.array([1.0]*4),
 
-                                          np.array([2]*4), np.array([2*np.pi]*4), np.array([50]*4), np.array([3*np.pi]*4), 
+                                          np.array([2]*4), np.array([2*np.pi]*4), np.array([50]*4), np.array([3*np.pi]*4) #, 
 
-                                          np.array([np.sqrt(2)*(6-0.5), np.pi]) )) + OBSERVATION_EPS)
+                                          # np.array([np.sqrt(2)*(6-0.5), np.pi])
+                                            )) + OBSERVATION_EPS)
       
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
@@ -237,7 +238,8 @@ class QuadrupedGymEnv(gym.Env):
 
                                          np.array([0]*4), np.array([0]*4), np.array([-20/8]*4), np.array([-3*np.pi]*4), 
                                          
-                                         np.array([0, 0]) )) - OBSERVATION_EPS)
+                                        #  np.array([0, 0]) 
+                                         )) - OBSERVATION_EPS)
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -274,8 +276,9 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_r(), 
                                           self._cpg.get_theta(),
                                           self._cpg.get_dr(),
-                                          self._cpg.get_dtheta(),
-                                          self.get_distance_and_angle_to_goal() ))
+                                          self._cpg.get_dtheta() #,
+                                          # self.get_distance_and_angle_to_goal()
+                                            ))
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -498,8 +501,7 @@ class QuadrupedGymEnv(gym.Env):
       tau = kp[3*i:3*i+3] @ (q_des - q[3*i:3*i+3]) + kd[3*i:3*i+3] @ (-dq[3*i:3*i+3]) # [TODO] 
 
       # add Cartesian PD contribution (as you wish)
-      tau += self.ScaleActionToCartesianPos(actions)[3*i:3*i+3]
-
+      
       action[3*i:3*i+3] = tau
 
     return action
