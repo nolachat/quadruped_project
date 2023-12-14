@@ -63,7 +63,7 @@ log_dir = interm_dir + '121423142514'
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
 
-env_config = {"motor_control_mode":"PD",
+env_config = {"motor_control_mode":"CPG",
                "task_env": "LR_COURSE_TASK",
                "observation_space_mode": "LR_COURSE_OBS"}
 
