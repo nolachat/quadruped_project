@@ -79,12 +79,15 @@ os.makedirs(SAVE_PATH, exist_ok=True)
 checkpoint_callback = CheckpointCallback(save_freq=30000, save_path=SAVE_PATH,name_prefix='rl_model', verbose=2)
 # create Vectorized gym environment
 env = lambda: QuadrupedGymEnv(**env_configs)  
-env = make_vec_env(env, monitor_dir=SAVE_PATH,n_envs=NUM_ENVS)
-# normalize observations to stabilize learning (why?)
-env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=100.)
 
-if LOAD_NN:
-    env = make_vec_env(env, n_envs=NUM_ENVS)
+if not LOAD_NN: 
+    env = make_vec_env(env, monitor_dir=SAVE_PATH,n_envs=NUM_ENVS)
+    # normalize observations to stabilize learning (why?)
+    env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=100.)
+else:
+    # env = lambda: QuadrupedGymEnv(**env_configs)
+    # SAVE_PATH = log_dir
+    env = make_vec_env(env, monitor_dir=SAVE_PATH, n_envs=NUM_ENVS)
     env = VecNormalize.load(stats_path, env)
 
 # Multi-layer perceptron (MLP) policy of two layers of size _,_ 

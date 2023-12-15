@@ -70,11 +70,27 @@ def write_env_config(destination_directory, vec_env, updated_config=None):
 ##########################################################################################################
 # Stable baselines 
 ##########################################################################################################
+
+## From CHATGPT, to find the last file, given all files are saved at the same time...		
+import re
+
+def extract_numbers_from_filename(filename):
+    # Define a regular expression pattern to match numbers
+    pattern = r'\d+'
+    
+    # Use re.findall to find all matches of the pattern in the filename
+    numbers = re.findall(pattern, filename)
+    
+    # Convert the list of strings to a list of integers
+    numbers = list(map(int, numbers))
+    
+    return numbers
+
 def get_latest_model(path):
 	""" Returns most recent model saved in path directory. """
 	files = os.listdir(path)
 	paths = [os.path.join(path, basename) for basename in files if basename.endswith('.zip')]
-	return max(paths, key=os.path.getctime)
+	return max(paths, key=extract_numbers_from_filename)
 
 def read_env_config(directory):
 	"""Read environment configuration from directory. """
