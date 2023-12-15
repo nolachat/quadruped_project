@@ -506,9 +506,9 @@ class QuadrupedGymEnv(gym.Env):
 
       # call inverse kinematics to get corresponding joint angles
       q_des = self.robot.ComputeInverseKinematics(i, [x,y,z]) # [TODO]
+  
       # Add joint PD contribution to tau
-      tau = kp[3*i:3*i+3] @ (q_des - q[3*i:3*i+3]) + kd[3*i:3*i+3] @ (-dq[3*i:3*i+3]) # [TODO] 
-
+      tau = np.diag(kp[3*i:3*i+3]) @ (q_des - q[3*i:3*i+3]) + np.diag(kd[3*i:3*i+3]) @ (-dq[3*i:3*i+3])
       # add Cartesian PD contribution (as you wish)
 
       action[3*i:3*i+3] = tau
