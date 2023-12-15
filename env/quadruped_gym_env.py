@@ -231,8 +231,9 @@ class QuadrupedGymEnv(gym.Env):
                                           
                                           np.array([50]*4), np.array([3*np.pi]*4)
 
-                                          ,
-                                          np.array([np.sqrt(2)*(6-0.5), np.pi])
+                                          , np.array([np.sqrt(2)*(6-0.5), np.pi])
+
+                                          , 3*self._robot_config.TORQUE_LIMITS[0:4], np.ones((4,))
 
                                             )) + OBSERVATION_EPS)
       
@@ -244,8 +245,9 @@ class QuadrupedGymEnv(gym.Env):
                                          
                                          np.array([-20/8]*4), np.array([-3*np.pi]*4)
                                          
-                                         ,
-                                         np.array([0, 0]) 
+                                         , np.array([0, 0])
+
+                                         , np.zeros((4,)), np.zeros((4,))
 
                                          )) - OBSERVATION_EPS)
 
@@ -278,15 +280,18 @@ class QuadrupedGymEnv(gym.Env):
       # if using the CPG, you can include states with self._cpg.get_r(), for example
       # 50 is arbitrary
 
+      contact_info = self.robot.GetContactInfo()
+
       self._observation = np.concatenate((self.robot.GetMotorAngles(), 
                                           self.robot.GetMotorVelocities(),
                                           self.robot.GetBaseOrientation(),
                                           self._cpg.get_r(), 
                                           self._cpg.get_theta(),
                                           self._cpg.get_dr(),
-                                          self._cpg.get_dtheta()
-                                          ,
+                                          self._cpg.get_dtheta(),
                                           self.get_distance_and_angle_to_goal()
+
+                                          , contact_info[2], contact_info[3]
                                             ))
 
     else:
