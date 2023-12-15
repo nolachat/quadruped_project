@@ -105,8 +105,17 @@ episode_reward = 0
 
 # [TODO] initialize arrays to save data from simulation 
 #
+duration = 2
+TIME_STEP = env.time_step
+NSTEPS = duration/TIME_STEP
+t = range(NSTEPS)
 
-for i in range(2000):
+amplitudes = np.zeros((4,len(t)))
+phases = np.zeros((4,len(t)))
+amplitudes_derivative = np.zeros((4,len(t)))
+phases_derivative = np.zeros((4,len(t)))
+
+for i in range(NSTEPS):
     action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
     obs, rewards, dones, info = env.step(action)
     episode_reward += rewards
@@ -117,6 +126,29 @@ for i in range(2000):
 
     # [TODO] save data from current robot states for plots 
     # To get base position, for example: env.envs[0].env.robot.GetBasePosition() 
-    #
+    # 
+    amplitudes[:,i] = env._cpg.get_r()
+    phases[:,i] = env._cpg.get_theta()
+    amplitudes_derivative[:,i] = env._cpg.get_dr()
+    phases_derivative[:,i] = env._cpg.get_dtheta()
     
 # [TODO] make plots:
+
+PlOT_STEPS = int(1.2 // (TIME_STEP))
+START_STEP = int(0 // (TIME_STEP))
+
+# # Create four subplots
+# fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+
+# # Plot each vector in a separate subplot
+# for i in range(4):
+#     axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes[i, START_STEP:PlOT_STEPS], label=f'Amplitude $r$')
+#     axes[i].plot(t[START_STEP:PlOT_STEPS], phases[i, START_STEP:PlOT_STEPS], label=f'Phase $\\theta$ ')
+#     axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes_derivative[i, START_STEP:PlOT_STEPS], label=f'Amplitude Derivative $\\dot{{r}}$')
+#     axes[i].plot(t[START_STEP:PlOT_STEPS], phases_derivative[i, START_STEP:PlOT_STEPS], label=f'Phase Derivative $\\dot{{\\theta}}$')
+#     axes[i].set_ylabel(f'{legID_Name(i)}')
+
+# axes[3].set_xlabel('Time')
+# plt.legend()
+# plt.suptitle(f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$) for a {gait} gait', fontsize=16)
+# plt.show()
