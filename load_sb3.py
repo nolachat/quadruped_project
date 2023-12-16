@@ -59,7 +59,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + '121523181156'
+log_dir = interm_dir + '121623084225'
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
@@ -105,9 +105,9 @@ episode_reward = 0
 
 # [TODO] initialize arrays to save data from simulation 
 #
-duration = 2
-TIME_STEP = env.time_step
-NSTEPS = duration/TIME_STEP
+duration = 2 #[s]
+TIME_STEP = 0.001
+NSTEPS = int(duration//TIME_STEP)
 t = range(NSTEPS)
 
 amplitudes = np.zeros((4,len(t)))
@@ -127,15 +127,17 @@ for i in range(NSTEPS):
     # [TODO] save data from current robot states for plots 
     # To get base position, for example: env.envs[0].env.robot.GetBasePosition() 
     # 
-    amplitudes[:,i] = env._cpg.get_r()
-    phases[:,i] = env._cpg.get_theta()
-    amplitudes_derivative[:,i] = env._cpg.get_dr()
-    phases_derivative[:,i] = env._cpg.get_dtheta()
+    # amplitudes[:,i] = env.envs[0].env._cpg.get_r()
+    # phases[:,i] = env.envs[0].env._cpg.get_theta()
+    # amplitudes_derivative[:,i] = env.envs[0].env._cpg.get_dr()
+    # phases_derivative[:,i] = env.envs[0].env._cpg.get_dtheta()
     
 # [TODO] make plots:
 
-PlOT_STEPS = int(1.2 // (TIME_STEP))
-START_STEP = int(0 // (TIME_STEP))
+# PlOT_STEPS = int(1.2 // (TIME_STEP))
+# START_STEP = int(0 // (TIME_STEP))
+
+# legID_Name = {0: "FR Leg", 1: "FL Leg", 2: "RR Leg", 3: "RL Leg"}
 
 # # Create four subplots
 # fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
@@ -146,7 +148,7 @@ START_STEP = int(0 // (TIME_STEP))
 #     axes[i].plot(t[START_STEP:PlOT_STEPS], phases[i, START_STEP:PlOT_STEPS], label=f'Phase $\\theta$ ')
 #     axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes_derivative[i, START_STEP:PlOT_STEPS], label=f'Amplitude Derivative $\\dot{{r}}$')
 #     axes[i].plot(t[START_STEP:PlOT_STEPS], phases_derivative[i, START_STEP:PlOT_STEPS], label=f'Phase Derivative $\\dot{{\\theta}}$')
-#     axes[i].set_ylabel(f'{legID_Name(i)}')
+#     axes[i].set_ylabel(f'{legID_Name[i]}')
 
 # axes[3].set_xlabel('Time')
 # plt.legend()

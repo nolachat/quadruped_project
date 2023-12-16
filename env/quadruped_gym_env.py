@@ -234,6 +234,7 @@ class QuadrupedGymEnv(gym.Env):
                                           , np.array([np.sqrt(2)*(6-0.5), np.pi])
 
                                           , 3*self._robot_config.TORQUE_LIMITS[0:4], np.ones((4,))
+                                          , 2*np.pi*np.ones((3,))
 
                                             )) + OBSERVATION_EPS)
       
@@ -248,6 +249,7 @@ class QuadrupedGymEnv(gym.Env):
                                          , np.array([0, 0])
 
                                          , np.zeros((4,)), np.zeros((4,))
+                                         , np.zeros((3,))
 
                                          )) - OBSERVATION_EPS)
 
@@ -292,6 +294,7 @@ class QuadrupedGymEnv(gym.Env):
                                           self.get_distance_and_angle_to_goal()
 
                                           , contact_info[2], contact_info[3]
+                                          ,self.robot.GetBaseOrientationRollPitchYaw()
                                             ))
 
     else:
