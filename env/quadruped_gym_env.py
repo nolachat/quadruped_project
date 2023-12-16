@@ -392,7 +392,7 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self):
     """ Implement your reward function here. How will you improve upon the above? """
 
-    reward = self._reward_fwd_locomotion(des_vel_x=2) + self._reward_flag_run()
+    reward = self._reward_flag_run()
 
     return reward
 
