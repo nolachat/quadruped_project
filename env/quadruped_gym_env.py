@@ -245,7 +245,7 @@ class QuadrupedGymEnv(gym.Env):
                                          np.array([-20/8]*4), np.array([-3*np.pi]*4)
                                          
                                          ,
-                                         np.array([0, 0]) 
+                                         np.array([0, -np.pi]) 
 
                                          )) - OBSERVATION_EPS)
 
@@ -376,7 +376,7 @@ class QuadrupedGymEnv(gym.Env):
     # minimize distance to goal (we want to move towards the goal)
     dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
     # minimize yaw deviation to goal (necessary?)
-    yaw_reward = 0 # -0.01 * np.abs(angle) 
+    yaw_reward = -0.1 * np.abs(angle) 
 
     # minimize energy 
     energy_reward = 0 
