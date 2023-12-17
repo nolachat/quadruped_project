@@ -376,7 +376,8 @@ class QuadrupedGymEnv(gym.Env):
     # minimize distance to goal (we want to move towards the goal)
     dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
     # minimize yaw deviation to goal (necessary?)
-    yaw_reward = -0.1 * np.abs(angle) 
+    yaw_reward = 0
+    # yaw_reward = -0.1 * np.abs(angle) 
 
     # minimize energy 
     energy_reward = 0 
@@ -625,8 +626,20 @@ class QuadrupedGymEnv(gym.Env):
         self._pybullet_client.removeBody(self.goal_id)
     except:
       pass
-    self._goal_location = 6 * (np.random.random((2,)) - 0.5) 
-    self._goal_location += self.robot.GetBasePosition()[0:2]
+
+    alpha_min = np.pi/8
+    alpha_Max = np.pi/4
+
+    vel = self.robot.GetBaseLinearVelocity()
+    direction = 2*np.arctan2(vel[1], vel[0])
+    ddir= (alpha_Max-alpha_min)*np.random.random() + alpha_min # change for difficulty
+    goal_angle = direction + np.sign(np.random.random()-0.5)*ddir
+    distance = 2 + 2 * np.random.random()
+
+    self._goal_location = distance * np.array([np.cos(goal_angle), np.sin(goal_angle)], dtype=np.float64)
+
+    self._goal_location += np.asarray(self.robot.GetBasePosition()[0:2])
+
     sh_colBox = self._pybullet_client.createCollisionShape(self._pybullet_client.GEOM_BOX,
         halfExtents=[0.2,0.2,0.2])
     orn = self._pybullet_client.getQuaternionFromEuler([0,0,0])
