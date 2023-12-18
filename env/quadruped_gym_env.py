@@ -358,6 +358,20 @@ class QuadrupedGymEnv(gym.Env):
     z_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBasePosition()[2] - des_z)**2 )
 
     return max(z_tracking_reward,0) # keep rewards positive
+  
+  def _stride_reward(self):
+    """Maximize stride"""
+
+    displacement = 0 
+    qd = self.robot.GetMotorVelocities()
+
+    for i in range(4):
+      # get Jacobian and foot position in leg frame for leg i 
+      J, pos = self.robot.ComputeJacobianAndPosition(i)
+      v = J @ qd[3*i:3*i+3]
+      displacement += np.abs(v[0]) * self._time_step
+
+    return displacement
 
   def get_distance_and_angle_to_goal(self):
     """ Helper to return distance and angle to current goal location. """
@@ -405,6 +419,10 @@ class QuadrupedGymEnv(gym.Env):
     """ Implement your reward function here. How will you improve upon the above? """
 
     reward = self._reward_fwd_locomotion(des_vel_x=0.5)
+
+    reward += self._height_tracking_reward()
+    reward += self._stride_reward()
+
     return reward
 
   def _reward(self):
