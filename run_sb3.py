@@ -68,7 +68,7 @@ else:
 
 if LOAD_NN:
     interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'Based_v=1_CurriculumGoal_pi_4' # add path
+    log_dir = interm_dir + 'v=1' # add path
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
