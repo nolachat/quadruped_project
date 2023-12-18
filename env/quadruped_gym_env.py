@@ -225,27 +225,25 @@ class QuadrupedGymEnv(gym.Env):
 
       observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
                                          self._robot_config.VELOCITY_LIMITS,
-                                         np.array([1.0]*4),
+                                         np.array([1.0]*4)
+                                         
+                                         , np.array([5]*3)
+                                         , np.array([2*np.pi]*3)
 
-                                          np.array([2]*4), np.array([2*np.pi]*4), 
-                                          
-                                          np.array([50]*4), np.array([3*np.pi]*4)
-
-                                          ,
-                                          np.array([np.sqrt(2)*(6-0.5), np.pi])
+                                         , 3*self._robot_config.TORQUE_LIMITS[0:4]+80, np.ones((4,))
+                                         , np.array([np.sqrt(2)*4, np.pi])
 
                                             )) + OBSERVATION_EPS)
       
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
                                          -self._robot_config.VELOCITY_LIMITS,
-                                         np.array([-1.0]*4),
+                                         np.array([-1.0]*4)
+                                         
+                                         , np.array([-5]*3)
+                                         , np.zeros((3,))
 
-                                         np.array([0]*4), np.array([0]*4), 
-                                         
-                                         np.array([-20/8]*4), np.array([-3*np.pi]*4)
-                                         
-                                         ,
-                                         np.array([0, -np.pi]) 
+                                         , np.zeros((4,)), np.zeros((4,))
+                                         , np.array([0, -np.pi]) 
 
                                          )) - OBSERVATION_EPS)
 
@@ -278,15 +276,19 @@ class QuadrupedGymEnv(gym.Env):
       # if using the CPG, you can include states with self._cpg.get_r(), for example
       # 50 is arbitrary
 
+      contact_info = self.robot.GetContactInfo()
+
+
       self._observation = np.concatenate((self.robot.GetMotorAngles(), 
                                           self.robot.GetMotorVelocities(),
-                                          self.robot.GetBaseOrientation(),
-                                          self._cpg.get_r(), 
-                                          self._cpg.get_theta(),
-                                          self._cpg.get_dr(),
-                                          self._cpg.get_dtheta()
-                                          ,
-                                          self.get_distance_and_angle_to_goal()
+                                          self.robot.GetBaseOrientation()
+                                          
+                                          , self.robot.GetBaseLinearVelocity()
+                                          , np.mod(self.robot.GetBaseOrientationRollPitchYaw(), np.array([2*np.pi]*3))
+
+                                          , contact_info[2], contact_info[3]
+                                          , self.get_distance_and_angle_to_goal()
+
                                             ))
 
     else:
@@ -393,7 +395,7 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self):
     """ Implement your reward function here. How will you improve upon the above? """
 
-    reward = self._reward_flag_run()
+    reward = self._reward_fwd_locomotion(des_vel_x=0.5)
 
     return reward
 

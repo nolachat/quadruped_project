@@ -46,7 +46,7 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 
 LEARNING_ALG = "PPO" # or "SAC"
-LOAD_NN = True # if you want to initialize training with a previous model 
+LOAD_NN = False # if you want to initialize training with a previous model 
 NUM_ENVS = 1   # how many pybullet environments to create for data collection
 USE_GPU = False # make sure to install all necessary drivers 
 
@@ -57,7 +57,7 @@ USE_GPU = False # make sure to install all necessary drivers
 #                "task_env": "FLAGRUN", #  "LR_COURSE_TASK",
 #                "observation_space_mode": "LR_COURSE_OBS"}
 
-env_configs = {"motor_control_mode":"CPG",
+env_configs = {"motor_control_mode":"CARTESIAN_PD",
                "task_env": "LR_COURSE_TASK",
                "observation_space_mode": "LR_COURSE_OBS"}
 
@@ -73,7 +73,7 @@ if LOAD_NN:
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-train_name = 'Based_CurriculumGoal_pi_4_CurriculumGoal_Doffset'
+train_name = 'G=fwd(0.5)'
 SAVE_PATH = './logs/intermediate_models/'+ train_name + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
