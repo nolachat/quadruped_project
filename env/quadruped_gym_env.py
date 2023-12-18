@@ -350,14 +350,13 @@ class QuadrupedGymEnv(gym.Env):
 
     return max(reward,0) # keep rewards positive
 
-  def _height_tracking_reward(self, des_z=None):
+  def _height_tracking_reward(self, mult=1):
     """Learn height tracking """
-    if not des_z: des_z = self._robot_config.INIT_POSITION[2]
-
+    des_z = mult*self._robot_config.INIT_POSITION[2]
     # track the desired height 
     z_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBasePosition()[2] - des_z)**2 )
 
-    return max(z_tracking_reward,0) # keep rewards positive
+    return z_tracking_reward
   
   def _stride_reward(self):
     """Maximize stride"""
@@ -369,8 +368,9 @@ class QuadrupedGymEnv(gym.Env):
       # get Jacobian and foot position in leg frame for leg i 
       J, pos = self.robot.ComputeJacobianAndPosition(i)
       v = J @ qd[3*i:3*i+3]
-      displacement += np.max(0,v[0]) * self._time_step
-      displacement += 0.5*np.max(0,v[2]) * self._time_step
+      # displacement += np.clip(v[0],a_min=0,a_max=None) * self._time_step
+      # displacement += 0.5*np.clip(v[2],a_min=0,a_max=None) * self._time_step
+      displacement += (np.abs(v[0]) + np.abs(v[2])) * self._time_step
 
     return displacement/5
 
@@ -421,7 +421,7 @@ class QuadrupedGymEnv(gym.Env):
 
     reward = self._reward_fwd_locomotion(des_vel_x=0.5)
 
-    reward += self._height_tracking_reward()
+    reward += self._height_tracking_reward(2)
     reward += self._stride_reward()
 
     return reward

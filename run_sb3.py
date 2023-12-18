@@ -73,7 +73,7 @@ if LOAD_NN:
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-train_name = 'G=fwd(0.5)_maxSmin0_fwd_scaled'
+train_name = 'G=fwd(0.5)_maxSclip0_fwd_scaled'
 SAVE_PATH = './logs/intermediate_models/'+ train_name + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
