@@ -369,9 +369,10 @@ class QuadrupedGymEnv(gym.Env):
       # get Jacobian and foot position in leg frame for leg i 
       J, pos = self.robot.ComputeJacobianAndPosition(i)
       v = J @ qd[3*i:3*i+3]
-      displacement += np.abs(v[0]) * self._time_step
+      displacement += np.max(0,v[0]) * self._time_step
+      displacement += 0.5*np.max(0,v[2]) * self._time_step
 
-    return displacement
+    return displacement/5
 
   def get_distance_and_angle_to_goal(self):
     """ Helper to return distance and angle to current goal location. """

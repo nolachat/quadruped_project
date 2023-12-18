@@ -68,12 +68,12 @@ else:
 
 if LOAD_NN:
     interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'G=fwd(0.5)_Mandaw' # add path
+    log_dir = interm_dir + 'G=fwd(0.5)_heightTrack_maxStride' # add path
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-train_name = 'G=fwd(0.5)_heightTrack_maxStride'
+train_name = 'G=fwd(0.5)_maxSmin0_fwd_scaled'
 SAVE_PATH = './logs/intermediate_models/'+ train_name + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
