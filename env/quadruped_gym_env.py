@@ -345,10 +345,19 @@ class QuadrupedGymEnv(gym.Env):
     reward = vel_tracking_reward \
             + yaw_reward \
             + drift_reward \
-            - 0.01 * energy_reward \
+            - 0.05 * energy_reward \
             - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
 
     return max(reward,0) # keep rewards positive
+
+  def _height_tracking_reward(self, des_z=None):
+    """Learn height tracking """
+    if not des_z: des_z = self._robot_config.INIT_POSITION[2]
+
+    # track the desired height 
+    z_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBasePosition()[2] - des_z)**2 )
+
+    return max(z_tracking_reward,0) # keep rewards positive
 
   def get_distance_and_angle_to_goal(self):
     """ Helper to return distance and angle to current goal location. """
@@ -396,7 +405,6 @@ class QuadrupedGymEnv(gym.Env):
     """ Implement your reward function here. How will you improve upon the above? """
 
     reward = self._reward_fwd_locomotion(des_vel_x=0.5)
-
     return reward
 
   def _reward(self):

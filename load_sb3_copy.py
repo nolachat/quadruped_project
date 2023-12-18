@@ -59,13 +59,13 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'G=fwd(0.5)'
+log_dir = interm_dir + 'G=fwd(0.5)_Mandaw'
 # log_dir = interm_dir + 'v=1'
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
 
-env_config = {"motor_control_mode":"CPG",
+env_config = {"motor_control_mode":"CARTESIAN_PD",
                "task_env": "LR_COURSE_TASK",
                "observation_space_mode": "LR_COURSE_OBS"}
 
