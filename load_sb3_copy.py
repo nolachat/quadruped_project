@@ -91,7 +91,7 @@ plt.show()
 env = lambda: QuadrupedGymEnv(**env_config)
 env = make_vec_env(env, n_envs=1)
 env = VecNormalize.load(stats_path, env)
-env.training = False    # do not update stats at test time
+env.training = True    # do not update stats at test time
 env.norm_reward = False # reward normalization is not needed at test time
 
 # load model
@@ -116,6 +116,8 @@ phases = np.zeros((4,len(t)))
 amplitudes_derivative = np.zeros((4,len(t)))
 phases_derivative = np.zeros((4,len(t)))
 
+base_speed = np.zeros((1,len(t)))
+
 for i in range(NSTEPS):
     action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
     obs, rewards, dones, info = env.step(action)
@@ -132,7 +134,8 @@ for i in range(NSTEPS):
     phases[:,i] = env.envs[0].env._cpg.get_theta()
     amplitudes_derivative[:,i] = env.envs[0].env._cpg.get_dr()
     phases_derivative[:,i] = env.envs[0].env._cpg.get_dtheta()
-    
+    base_speed[:,i] = env.envs[0].env.robot.GetBaseLinearVelocity()[0]
+
 # [TODO] make plots:
 
 # PlOT_STEPS = int(1.2 // (TIME_STEP))
@@ -158,4 +161,15 @@ for i in range(4):
 axes[3].set_xlabel('Time')
 plt.legend()
 plt.suptitle(f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$)', fontsize=16)
+plt.show()
+
+plt.plot()
+
+# Plotting
+plt.plot(t, base_speed[0], label='Speed along x')
+plt.title('Speed along x axis')
+plt.xlabel('Timesteps')
+plt.ylabel('Speed (m/s)')
+plt.legend()
+plt.grid(True)
 plt.show()
