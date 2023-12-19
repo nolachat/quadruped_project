@@ -59,7 +59,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'Bound'
+log_dir = interm_dir + '121823172613'
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
@@ -75,8 +75,8 @@ env_config = {"motor_control_mode":"CPG",
 
 env_config['render'] = True
 env_config['record_video'] = False
-env_config['add_noise'] = False 
-# env_config['competition_env'] = True
+env_config['add_noise'] = False
+env_config['competition_env'] = True
 
 # get latest model and normalization stats, and plot 
 stats_path = os.path.join(log_dir, "vec_normalize.pkl")

@@ -121,7 +121,7 @@ class QuadrupedGymEnv(gym.Env):
       action_repeat=10,  
       distance_weight=2,
       energy_weight=0.008,
-      motor_control_mode="PD",
+      motor_control_mode="CPG",
       task_env="FWD_LOCOMOTION",
       observation_space_mode="DEFAULT",
       on_rack=False,
@@ -384,7 +384,7 @@ class QuadrupedGymEnv(gym.Env):
     # minimize distance to goal (we want to move towards the goal)
     dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
     # minimize yaw deviation to goal (necessary?)
-    yaw_reward = 0 # -0.01 * np.abs(angle) 
+    yaw_reward = -0.01 * np.abs(angle) 
 
     # minimize energy 
     energy_reward = 0 
@@ -401,7 +401,7 @@ class QuadrupedGymEnv(gym.Env):
     """ Implement your reward function here. How will you improve upon the above? """
     # [TODO] add your reward function. 
 
-    reward = self._reward_fwd_locomotion(0.5)
+    reward = self._reward_fwd_locomotion(1) 
 
 
     return reward
@@ -530,7 +530,7 @@ class QuadrupedGymEnv(gym.Env):
     # save motor torques and velocities to compute power in reward function
     self._dt_motor_torques = []
     self._dt_motor_velocities = []
-    if "FLAGRUN" in self._TASK_ENV:
+    if "FLAGRUN" in self._TASK_ENV or "LR_COURSE_TASK" in self._TASK_ENV:
       self._prev_pos_to_goal, _ = self.get_distance_and_angle_to_goal()
     
     for _ in range(self._action_repeat):
