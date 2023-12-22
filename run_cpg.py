@@ -63,7 +63,7 @@ env = QuadrupedGymEnv(render=True,              # visualize
 
 # initialize Hopf Network, supply gait
 # cpg = HopfNetwork(time_step=TIME_STEP)
-gait = "BOUND"
+gait = "TROT"
 cpg = HopfNetwork(time_step=TIME_STEP, gait=gait)
 
 
@@ -75,6 +75,9 @@ amplitudes = np.zeros((4,len(t)))
 phases = np.zeros((4,len(t)))
 amplitudes_derivative = np.zeros((4,len(t)))
 phases_derivative = np.zeros((4,len(t)))
+
+desired_foot_pos = np.zeros((2,len(t)))
+current_foot_pos = np.zeros((2,len(t)))
 
 ############## Sample Gains
 # joint PD gains
@@ -92,7 +95,7 @@ for j in range(TEST_STEPS):
   # [/TODO] get current motor angles and velocities for joint PD, see GetMotorAngles(), GetMotorVelocities() in quadruped.py
   q = env.robot.GetMotorAngles()
   dq = env.robot.GetMotorVelocities()
-  
+
   # loop through desired foot positions and calculate torques
   for i in range(4):
     # initialize torques for legi
@@ -106,12 +109,18 @@ for j in range(TEST_STEPS):
     # add Cartesian PD contribution
     if ADD_CARTESIAN_PD:
       # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
-      J,pos = env.robot.ComputeJacobianAndPosition(i) #[/TODO] 
+      J, pos = env.robot.ComputeJacobianAndPosition(i) #[/TODO]
       # Get current foot velocity in leg frame (Equation 2)
       v = J @ dq[3*i:3*i+3] # [TODO] 
       # Calculate torque contribution from Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-      tau =tau+ J.T @ (np.matmul(kpCartesian,(leg_xyz-pos))+np.matmul(kdCartesian,(-v))) # [/TODO]
-  
+      tau = tau + J.T @ (np.matmul(kpCartesian,(leg_xyz-pos))+np.matmul(kdCartesian,(-v))) # [/TODO]
+
+      if i == 0: current_foot_pos[:,j] = np.array([pos[0], pos[2]])
+    
+    elif i == 0:
+      J, pos = env.robot.ComputeJacobianAndPosition(0) #[/TODO]
+      current_foot_pos[:,j] = np.array([pos[0], pos[2]])
+      
     action[3*i:3*i+3] = tau
 
   env.step(action) 
@@ -122,6 +131,8 @@ for j in range(TEST_STEPS):
   phases[:,j] = cpg.get_theta()
   amplitudes_derivative[:,j] = cpg.get_dr()
   phases_derivative[:,j] = cpg.get_dtheta()
+
+  desired_foot_pos[:,j] = np.array([xs[0], zs[0]])
 
 ##################################################### 
 # PLOTS
@@ -134,38 +145,66 @@ def legID_Name(legID):
 PlOT_STEPS = int(1.2 // (TIME_STEP))
 START_STEP = int(0 // (TIME_STEP))
 
-# # Create four subplots
-# fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+# controls what plots to display
+plot_array = [False,False,True]
 
-# # Plot each vector in a separate subplot
-# for i in range(4):
-#     axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes[i, START_STEP:PlOT_STEPS], label=f'Amplitude $r$')
-#     axes[i].plot(t[START_STEP:PlOT_STEPS], phases[i, START_STEP:PlOT_STEPS], label=f'Phase $\\theta$ ')
-#     axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes_derivative[i, START_STEP:PlOT_STEPS], label=f'Amplitude Derivative $\\dot{{r}}$')
-#     axes[i].plot(t[START_STEP:PlOT_STEPS], phases_derivative[i, START_STEP:PlOT_STEPS], label=f'Phase Derivative $\\dot{{\\theta}}$')
-#     axes[i].set_ylabel(f'{legID_Name(i)}')
+### CPG states
 
-# axes[3].set_xlabel('Time')
-# plt.legend()
-# plt.suptitle(f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$) for a {gait} gait', fontsize=16)
-# plt.show()
+if plot_array[0]:
+  # Create four subplots
+  fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
 
-# Create subplots
-fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+  # Plot each vector in a separate subplot
+  for i in range(4):
+      axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes[i, START_STEP:PlOT_STEPS], label=f'Amplitude $r$')
+      axes[i].plot(t[START_STEP:PlOT_STEPS], phases[i, START_STEP:PlOT_STEPS], label=f'Phase $\\theta$ ')
+      axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes_derivative[i, START_STEP:PlOT_STEPS], label=f'Amplitude Derivative $\\dot{{r}}$')
+      axes[i].plot(t[START_STEP:PlOT_STEPS], phases_derivative[i, START_STEP:PlOT_STEPS], label=f'Phase Derivative $\\dot{{\\theta}}$')
+      axes[i].set_ylabel(f'{legID_Name(i)}')
 
-# Flatten the axes array for easier indexing
-axes = axes.flatten()
+  axes[3].set_xlabel('Time')
+  plt.legend()
+  plt.suptitle(f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$) for a {gait} gait', fontsize=16)
+  plt.show()
 
-# Plot positions on each subplot
-for i in range(4):
-    x = amplitudes[i, :] * np.cos(phases[i, :])
-    y = amplitudes[i, :] * np.sin(phases[i, :])
+### Feet position
 
-    axes[i].plot(x, y)
-    axes[i].set_title(legID_Name(i))
-    axes[i].set_ylabel(r'$Y = r \cdot \sin({\theta})$')
-    axes[i].set_xlabel(r'$X = r \cdot \cos({\theta})$')
+if plot_array[1]:
 
-plt.suptitle(f'Position Plots for Each Amplitude and Phase Pair with gait: {gait}', fontsize=16)
-plt.tight_layout()
-plt.show()
+  # Create subplots
+  fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+
+  # Flatten the axes array for easier indexing
+  axes = axes.flatten()
+
+  # Plot positions on each subplot
+  for i in range(4):
+      x = amplitudes[i, :] * np.cos(phases[i, :])
+      y = amplitudes[i, :] * np.sin(phases[i, :])
+
+      axes[i].plot(x, y)
+      axes[i].set_title(legID_Name(i))
+      axes[i].set_ylabel(r'$Y = r \cdot \sin({\theta})$')
+      axes[i].set_xlabel(r'$X = r \cdot \cos({\theta})$')
+
+  plt.suptitle(f'Position Plots for Each Amplitude and Phase Pair with gait: {gait}', fontsize=16)
+  plt.tight_layout()
+  plt.show()
+
+if plot_array[2]:
+  
+  fig, ax = plt.subplots()
+
+  ax.plot(current_foot_pos[0,:], current_foot_pos[1,:], label=f'Current foot position')
+  ax.plot(desired_foot_pos[0,:], desired_foot_pos[1,:], label=f'Desired foot position')
+
+  ax.set_ylabel(f'Height Z')
+  ax.set_xlabel(f'Horizontal position X')
+  ax.legend(loc="upper right")
+
+  if ADD_CARTESIAN_PD:
+    ax.set_title('Evolution of the desired foot position and the foot position with joint and cartesian PD controllers ', wrap = True)
+  else:
+    ax.set_title('Evolution of the desired foot position and the foot position with joint PD controller (only) ', wrap = True)
+
+  plt.show()
