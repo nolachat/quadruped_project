@@ -105,7 +105,6 @@ MAX_FWD_VELOCITY = 1  # to avoid exploiting simulator dynamics, cap max reward f
 MU_LOW = 1
 MU_UPP = 2
 
-
 class QuadrupedGymEnv(gym.Env):
   """The gym environment for a quadruped {Unitree A1}.
 
@@ -549,7 +548,7 @@ class QuadrupedGymEnv(gym.Env):
       tau = np.diag(kp[3*i:3*i+3]) @ (q_des - q[3*i:3*i+3]) + np.diag(kd[3*i:3*i+3]) @ (-dq[3*i:3*i+3])
 
       # add Cartesian PD contribution (as you wish)
-      if True:
+      if False:
         kpCartesian = self._robot_config.kpCartesian
         kdCartesian = self._robot_config.kdCartesian
 
