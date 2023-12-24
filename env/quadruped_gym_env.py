@@ -204,9 +204,6 @@ class QuadrupedGymEnv(gym.Env):
     self.videoLogID = None
     self.seed()
     self.reset()
-
-    # speed command
-    self.desired_velocity = 0.5 + np.random.rand()
  
   def setupCPG(self):
     self._cpg = HopfNetwork(use_RL=True)
@@ -234,10 +231,9 @@ class QuadrupedGymEnv(gym.Env):
                                           
                                           np.array([50]*4), np.array([3*np.pi]*4)
 
-                                          ,
-                                          np.array([np.sqrt(2)*(6-0.5), np.pi])
+                                          , np.array([np.sqrt(2)*(6-0.5), np.pi])
 
-                                          , 1.5 * np.ones((1,))
+                                          , np.array([1.5])
 
                                             )) + OBSERVATION_EPS)
       
@@ -249,10 +245,9 @@ class QuadrupedGymEnv(gym.Env):
                                          
                                          np.array([-20/8]*4), np.array([-3*np.pi]*4)
                                          
-                                         ,
-                                         np.array([0, -np.pi]) 
+                                         , np.array([0, -np.pi]) 
 
-                                         , np.zeros((1,))
+                                         , np.array([0.5])
 
                                          )) - OBSERVATION_EPS)
 
@@ -266,7 +261,7 @@ class QuadrupedGymEnv(gym.Env):
     if self._motor_control_mode in ["PD","TORQUE", "CARTESIAN_PD"]:
       action_dim = 12
     elif self._motor_control_mode in ["CPG"]:
-      action_dim = 12
+      action_dim = 9
     else:
       raise ValueError("motor control mode " + self._motor_control_mode + " not implemented yet.")
     action_high = np.array([1] * action_dim)
@@ -365,7 +360,7 @@ class QuadrupedGymEnv(gym.Env):
     d_phi = np.array([np.cos(phi), np.sin(phi)])
 
     v_vec = self.robot.GetBaseLinearVelocity()[0:2]
-    v = np.linalg.norm(v)
+    v = np.linalg.norm(v_vec)
 
     vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (v - des_vel)**2 ) * max(np.dot(d_phi,v_vec),0)/v
 
@@ -430,8 +425,9 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self):
     """ Implement your reward function here. How will you improve upon the above? """
 
-    reward = self._reward_speed_tracking(des_vel=self.desired_velocity)
-    reward += self._reward_flag_run()
+    # reward = self._reward_speed_tracking(des_vel=self.desired_velocity)
+    # reward += self._reward_flag_run()
+    reward = self._reward_fwd_locomotion(des_vel_x=self.desired_velocity)
 
     return reward
 
@@ -526,6 +522,10 @@ class QuadrupedGymEnv(gym.Env):
     # IK parameters
     foot_y = self._robot_config.HIP_LINK_LENGTH
     sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
+
+    # scale ys to ranges
+    # front_foot_dy = self._scale_helper( u[8],  -self._cpg._max_step_len_rl,  self._cpg._max_step_len_rl)
+
     # get motor kp and kd gains (can be modified)
     kp = self._robot_config.MOTOR_KP # careful of size!
     kd = self._robot_config.MOTOR_KD
@@ -538,7 +538,8 @@ class QuadrupedGymEnv(gym.Env):
     for i in range(4):
       # get desired foot i pos (xi, yi, zi)
       x = xs[i]
-      y = sideSign[i] * foot_y # careful of sign
+      y = sideSign[i] * foot_y
+      # y += front_foot_dy * ( i == 0 or i == 1)
       z = zs[i]
 
       # call inverse kinematics to get corresponding joint angles
@@ -546,7 +547,15 @@ class QuadrupedGymEnv(gym.Env):
   
       # Add joint PD contribution to tau
       tau = np.diag(kp[3*i:3*i+3]) @ (q_des - q[3*i:3*i+3]) + np.diag(kd[3*i:3*i+3]) @ (-dq[3*i:3*i+3])
+
       # add Cartesian PD contribution (as you wish)
+      if True:
+        kpCartesian = self._robot_config.kpCartesian
+        kdCartesian = self._robot_config.kdCartesian
+
+        J,pos = self.robot.ComputeJacobianAndPosition(i) 
+        v = J @ dq[3*i:3*i+3]
+        tau += J.T @ (kpCartesian @ (np.array([x,y,z])-pos) - kdCartesian @ v) # [/TODO]
 
       action[3*i:3*i+3] = tau
 
@@ -597,6 +606,11 @@ class QuadrupedGymEnv(gym.Env):
   ######################################################################################
   def reset(self):
     """ Set up simulation environment. """
+
+    # change speed command
+    # self.desired_velocity = np.array([0.5 + np.random.rand()])
+    self.desired_velocity = np.array([0.5])
+
     mu_min = 0.5
     if self._hard_reset:
       # set up pybullet simulation
