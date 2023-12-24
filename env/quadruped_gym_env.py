@@ -204,6 +204,9 @@ class QuadrupedGymEnv(gym.Env):
     self.videoLogID = None
     self.seed()
     self.reset()
+
+    # speed command
+    self.desired_velocity = 0.5 + np.random.rand()
  
   def setupCPG(self):
     self._cpg = HopfNetwork(use_RL=True)
@@ -234,6 +237,8 @@ class QuadrupedGymEnv(gym.Env):
                                           ,
                                           np.array([np.sqrt(2)*(6-0.5), np.pi])
 
+                                          , 1.5 * np.ones((1,))
+
                                             )) + OBSERVATION_EPS)
       
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
@@ -247,6 +252,8 @@ class QuadrupedGymEnv(gym.Env):
                                          ,
                                          np.array([0, -np.pi]) 
 
+                                         , np.zeros((1,))
+
                                          )) - OBSERVATION_EPS)
 
     else:
@@ -259,7 +266,7 @@ class QuadrupedGymEnv(gym.Env):
     if self._motor_control_mode in ["PD","TORQUE", "CARTESIAN_PD"]:
       action_dim = 12
     elif self._motor_control_mode in ["CPG"]:
-      action_dim = 8
+      action_dim = 12
     else:
       raise ValueError("motor control mode " + self._motor_control_mode + " not implemented yet.")
     action_high = np.array([1] * action_dim)
@@ -281,12 +288,14 @@ class QuadrupedGymEnv(gym.Env):
       self._observation = np.concatenate((self.robot.GetMotorAngles(), 
                                           self.robot.GetMotorVelocities(),
                                           self.robot.GetBaseOrientation(),
+
                                           self._cpg.get_r(), 
                                           self._cpg.get_theta(),
                                           self._cpg.get_dr(),
                                           self._cpg.get_dtheta()
-                                          ,
-                                          self.get_distance_and_angle_to_goal()
+
+                                          ,self.get_distance_and_angle_to_goal()
+                                          ,self.desired_velocity
                                             ))
 
     else:
@@ -347,7 +356,35 @@ class QuadrupedGymEnv(gym.Env):
             - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
 
     return max(reward,0) # keep rewards positive
+  
+  def _reward_speed_tracking(self, des_vel=0.5):
+    """Learn forward locomotion at a desired velocity. """
+    # track the desired velocity
+    b_q = self.robot.GetBaseOrientation()
+    phi = np.arctan2(2*(b_q[0]*b_q[1] + b_q[2]*b_q[3]), 1-2*(b_q[1]**2 + b_q[2]**2))
+    d_phi = np.array([np.cos(phi), np.sin(phi)])
 
+    v_vec = self.robot.GetBaseLinearVelocity()[0:2]
+    v = np.linalg.norm(v)
+
+    vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (v - des_vel)**2 ) * max(np.dot(d_phi,v_vec),0)/v
+
+    # minimize yaw (go straight)
+    # yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) 
+    # don't drift laterally 
+    # drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1])
+
+    # minimize energy 
+    energy_reward = 0 
+    for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
+      energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
+
+    reward = vel_tracking_reward \
+            - 0.01 * energy_reward \
+            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
+
+    return max(reward,0) # keep rewards positive
+  
   def get_distance_and_angle_to_goal(self):
     """ Helper to return distance and angle to current goal location. """
     # current object location
@@ -393,7 +430,8 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self):
     """ Implement your reward function here. How will you improve upon the above? """
 
-    reward = self._reward_flag_run()
+    reward = self._reward_speed_tracking(des_vel=self.desired_velocity)
+    reward += self._reward_flag_run()
 
     return reward
 
