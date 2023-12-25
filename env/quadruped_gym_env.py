@@ -333,7 +333,7 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_fwd_locomotion(self, des_vel_x=0.5):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity 
-    vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
+    vel_tracking_reward = 0.05 * np.exp( - 100 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
     # minimize yaw (go straight)
     yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) 
     # don't drift laterally 

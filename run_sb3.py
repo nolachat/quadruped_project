@@ -99,7 +99,7 @@ learning_rate = lambda f: 1e-4
 
 ppo_config = {  "gamma":0.99, 
                 "n_steps": int(n_steps/NUM_ENVS), 
-                "ent_coef":0.005, 
+                "ent_coef":0.001, 
                 "learning_rate":learning_rate, 
                 "vf_coef":0.5,
                 "max_grad_norm":0.5, 
