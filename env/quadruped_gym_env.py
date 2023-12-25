@@ -607,8 +607,8 @@ class QuadrupedGymEnv(gym.Env):
     """ Set up simulation environment. """
 
     # change speed command
-    # self.desired_velocity = np.array([0.5 + np.random.rand()])
-    self.desired_velocity = np.array([0.5])
+    self.desired_velocity = np.array([0.5 + np.sqrt(1-(1-np.random.rand())**2 )])
+    # self.desired_velocity = np.array([0.5])
 
     mu_min = 0.5
     if self._hard_reset:

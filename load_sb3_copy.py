@@ -35,6 +35,9 @@ import time
 import matplotlib
 import matplotlib.pyplot as plt
 from sys import platform
+
+import textwrap
+
 # may be helpful depending on your system
 # if platform =="darwin": # mac
 #   import PyQt5
@@ -59,7 +62,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'Extended_CPG_v01_no_cartesian'
+log_dir = interm_dir + 'Extended_CPG_v02_track_speed_command'
 # log_dir = interm_dir + 'v=1'
 
 # initialize env configs (render at test time)
@@ -135,6 +138,7 @@ for i in range(NSTEPS):
     amplitudes_derivative[:,i] = env.envs[0].env._cpg.get_dr()
     phases_derivative[:,i] = env.envs[0].env._cpg.get_dtheta()
     base_speed[:,i] = env.envs[0].env.robot.GetBaseLinearVelocity()[0]
+    print("desired_velocity:", str(env.envs[0].env.desired_velocity))
 
 # [TODO] make plots:
 
@@ -165,6 +169,9 @@ plt.show()
 
 plt.plot()
 
+mean_speed = np.mean(base_speed[0])
+std = np.std(base_speed[0])
+
 # Plotting
 plt.plot(t, base_speed[0], label='Speed along x')
 plt.title('Speed along x axis')
@@ -172,4 +179,9 @@ plt.xlabel('Timesteps')
 plt.ylabel('Speed (m/s)')
 plt.legend()
 plt.grid(True)
+
+text = fr'Results for speed tracking' + '\n' + fr'$\mu$ = {mean_speed:.2f}, $\sigma$ = {std:.2f}'
+
+plt.text(0.5, 0.1, text, transform=plt.gca().transAxes, ha='center', va='bottom', fontsize=12, wrap=True)
+
 plt.show()
