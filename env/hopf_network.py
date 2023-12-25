@@ -240,7 +240,7 @@ class HopfNetwork():
     # loop through each leg's oscillator, find current velocities
     for i in range(4):
       # get r_i, theta_i from X
-      r, theta = X[0,i],X[1,i]
+      r = X[0,i]
       # amplitude (use mu from RL, i.e. self._mu_rl[i])
       r_dot = self._alpha * (self._mu_rl[i] - r**2)*r  # [TODO/]
       # phase (use omega from RL, i.e. self._omega_rl[i])

@@ -68,12 +68,12 @@ else:
 
 if LOAD_NN:
     interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'Extended_CPG_v02_track_speed_command' # add path
+    log_dir = interm_dir + 'Extended_CPG_v03_track_prob_adjustment' # add path
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-train_name = 'Extended_CPG_v03_track_prob_adjustment'
+train_name = 'Extended_CPG_v04_linear'
 SAVE_PATH = './logs/intermediate_models/'+ train_name + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
@@ -99,7 +99,7 @@ learning_rate = lambda f: 1e-4
 
 ppo_config = {  "gamma":0.99, 
                 "n_steps": int(n_steps/NUM_ENVS), 
-                "ent_coef":0.0, 
+                "ent_coef":0.005, 
                 "learning_rate":learning_rate, 
                 "vf_coef":0.5,
                 "max_grad_norm":0.5, 

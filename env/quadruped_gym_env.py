@@ -590,6 +590,7 @@ class QuadrupedGymEnv(gym.Env):
     done = False
     if self._termination() or self.get_sim_time() > self._MAX_EP_LEN:
       done = True
+      # print("Sim ended for speed:", self.desired_velocity)
 
     # if "FLAGRUN" in self._TASK_ENV:
     
@@ -607,7 +608,9 @@ class QuadrupedGymEnv(gym.Env):
     """ Set up simulation environment. """
 
     # change speed command
-    self.desired_velocity = np.array([0.5 + np.sqrt(1-(1-np.random.rand())**2 )])
+    # self.desired_velocity = np.array([0.5 + np.sqrt(1-(1-np.random.rand())**2 )])
+    self.desired_velocity = np.array([0.5 + np.random.rand()])
+    # print("V set to:", self.desired_velocity)
     # self.desired_velocity = np.array([0.5])
 
     mu_min = 0.5
