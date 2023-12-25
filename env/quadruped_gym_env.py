@@ -270,10 +270,13 @@ class QuadrupedGymEnv(gym.Env):
       self._observation = np.concatenate((self.robot.GetMotorAngles(), 
                                           self.robot.GetMotorVelocities(),
                                           self.robot.GetBaseOrientation() ))
+      
     elif self._observation_space_mode == "LR_COURSE_OBS":
       # [TODO] Get observation from robot. What are reasonable measurements we could get on hardware?
       # if using the CPG, you can include states with self._cpg.get_r(), for example
       # 50 is arbitrary
+
+      contact_info = self.robot.GetContactInfo()
 
       self._observation = np.concatenate((self.robot.GetMotorAngles(), 
                                           self.robot.GetMotorVelocities(),
@@ -285,6 +288,7 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_dtheta()
 
                                           ,self.get_distance_and_angle_to_goal()
+                                          , contact_info[2], contact_info[3]
                                           ))
 
     else:
