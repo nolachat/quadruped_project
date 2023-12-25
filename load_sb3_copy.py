@@ -62,7 +62,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'Extended_CPG_v04_linear'
+log_dir = interm_dir + 'CPG_desireless_v0'
 # log_dir = interm_dir + 'v=1'
 
 # initialize env configs (render at test time)
@@ -96,8 +96,6 @@ env = make_vec_env(env, n_envs=1)
 env = VecNormalize.load(stats_path, env)
 env.training = True    # do not update stats at test time
 env.norm_reward = False # reward normalization is not needed at test time
-
-desired_velocity = env.envs[0].env.desired_velocity
 
 # load model
 if LEARNING_ALG == "PPO":
@@ -180,11 +178,4 @@ ax.set_xlabel('Timesteps')
 ax.set_ylabel('Speed (m/s)')
 ax.legend()
 ax.grid(True)
-
-ax.axhline(y=desired_velocity, color='r', linestyle='--')
-
-text = fr'Results for speed tracking {desired_velocity}' + '\n' + fr'$\mu$ = {mean_speed:.2f}, $\sigma$ = {std:.2f}'
-
-ax.text(0.5, 0.1, text, transform=ax.transAxes, ha='center', va='bottom', fontsize=12, wrap=True)
-
 plt.show()
