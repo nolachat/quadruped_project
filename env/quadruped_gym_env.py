@@ -231,6 +231,7 @@ class QuadrupedGymEnv(gym.Env):
                                           np.array([50]*4), np.array([3*np.pi]*4)
 
                                           , np.array([np.sqrt(2)*(6-0.5), np.pi])
+                                          , np.array([500]*4), np.ones((4,))
 
                                             )) + OBSERVATION_EPS)
       
@@ -243,6 +244,7 @@ class QuadrupedGymEnv(gym.Env):
                                          np.array([-20/8]*4), np.array([-3*np.pi]*4)
                                          
                                          , np.array([0, -np.pi])
+                                         , np.zeros((4,)), np.zeros((4,))
 
                                          )) - OBSERVATION_EPS)
 
@@ -287,7 +289,7 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_dr(),
                                           self._cpg.get_dtheta()
 
-                                          ,self.get_distance_and_angle_to_goal()
+                                          , self.get_distance_and_angle_to_goal()
                                           , contact_info[2], contact_info[3]
                                           ))
 
@@ -423,9 +425,8 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self):
     """ Implement your reward function here. How will you improve upon the above? """
 
-    # reward = self._reward_speed_tracking(des_vel=self.desired_velocity)
     # reward += self._reward_flag_run()
-    reward = self._reward_fwd_locomotion(des_vel_x=0.5)
+    reward = self._reward_fwd_locomotion(des_vel_x=1)
 
     return reward
 
@@ -589,7 +590,6 @@ class QuadrupedGymEnv(gym.Env):
     done = False
     if self._termination() or self.get_sim_time() > self._MAX_EP_LEN:
       done = True
-      # print("Sim ended for speed:", self.desired_velocity)
 
     # if "FLAGRUN" in self._TASK_ENV:
     
@@ -605,12 +605,6 @@ class QuadrupedGymEnv(gym.Env):
   ######################################################################################
   def reset(self):
     """ Set up simulation environment. """
-
-    # change speed command
-    # self.desired_velocity = np.array([0.5 + np.sqrt(1-(1-np.random.rand())**2 )])
-    self.desired_velocity = np.array([0.5 + np.random.rand()])
-    # print("V set to:", self.desired_velocity)
-    # self.desired_velocity = np.array([0.5])
 
     mu_min = 0.5
     if self._hard_reset:

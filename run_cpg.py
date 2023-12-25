@@ -63,7 +63,7 @@ env = QuadrupedGymEnv(render=True,              # visualize
 
 # initialize Hopf Network, supply gait
 # cpg = HopfNetwork(time_step=TIME_STEP)
-gait = "BOUND"
+gait = "TROT"
 cpg = HopfNetwork(time_step=TIME_STEP, gait=gait)
 
 
@@ -122,6 +122,8 @@ for j in range(TEST_STEPS):
   phases[:,j] = cpg.get_theta()
   amplitudes_derivative[:,j] = cpg.get_dr()
   phases_derivative[:,j] = cpg.get_dtheta()
+
+  print(env.robot.GetContactInfo()[2])
 
 ##################################################### 
 # PLOTS
