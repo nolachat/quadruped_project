@@ -232,8 +232,6 @@ class QuadrupedGymEnv(gym.Env):
 
                                           , np.array([np.sqrt(2)*(6-0.5), np.pi])
 
-                                          , np.array([1.5])
-
                                             )) + OBSERVATION_EPS)
       
       observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
@@ -244,9 +242,7 @@ class QuadrupedGymEnv(gym.Env):
                                          
                                          np.array([-20/8]*4), np.array([-3*np.pi]*4)
                                          
-                                         , np.array([0, -np.pi]) 
-
-                                         , np.array([0.5])
+                                         , np.array([0, -np.pi])
 
                                          )) - OBSERVATION_EPS)
 
@@ -289,8 +285,7 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_dtheta()
 
                                           ,self.get_distance_and_angle_to_goal()
-                                          ,self.desired_velocity
-                                            ))
+                                          ))
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -333,7 +328,7 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_fwd_locomotion(self, des_vel_x=0.5):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity 
-    vel_tracking_reward = 0.05 * np.exp( - 100 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
+    vel_tracking_reward = 0.05 * np.exp( - 1/ 0.25 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
     # minimize yaw (go straight)
     yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) 
     # don't drift laterally 
@@ -426,7 +421,7 @@ class QuadrupedGymEnv(gym.Env):
 
     # reward = self._reward_speed_tracking(des_vel=self.desired_velocity)
     # reward += self._reward_flag_run()
-    reward = self._reward_fwd_locomotion(des_vel_x=self.desired_velocity)
+    reward = self._reward_fwd_locomotion(des_vel_x=0.5)
 
     return reward
 
