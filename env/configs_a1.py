@@ -51,7 +51,7 @@ INIT_RACK_POSITION = [0, 0, 1] # when hung up in air (for debugging)
 INIT_POSITION = [0, 0, 0.305]  # normal initial height
 IS_FALLEN_HEIGHT = 0.18        # height at which robot is considered fallen
 
-INIT_ORIENTATION = (0, 0, 0.2570806, 0.96639) 
+INIT_ORIENTATION = (0, 0, 0, 1) 
 _, INIT_ORIENTATION_INV = pyb.invertTransform(
         position=[0, 0, 0], orientation=INIT_ORIENTATION)
 

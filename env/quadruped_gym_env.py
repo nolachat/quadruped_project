@@ -356,7 +356,7 @@ class QuadrupedGymEnv(gym.Env):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity
     phi = self._pybullet_client.getEulerFromQuaternion(self.robot.GetBaseOrientation())[2]
-    print("heading_phi: ", np.rad2deg(phi))
+    # print("heading_phi: ", np.rad2deg(phi))
     d_phi = np.array([np.cos(phi), np.sin(phi)])
 
     v_vec = self.robot.GetBaseLinearVelocity()[0:2]
