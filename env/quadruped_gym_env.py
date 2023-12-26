@@ -231,7 +231,7 @@ class QuadrupedGymEnv(gym.Env):
                                           np.array([50]*4), np.array([3*np.pi]*4)
 
                                           , np.array([np.sqrt(2)*(6-0.5), np.pi])
-                                          , np.array([500]*4), np.ones((4,))
+                                          , np.array([500]*4)
 
                                             )) + OBSERVATION_EPS)
       
@@ -244,7 +244,7 @@ class QuadrupedGymEnv(gym.Env):
                                          np.array([-20/8]*4), np.array([-3*np.pi]*4)
                                          
                                          , np.array([0, -np.pi])
-                                         , np.zeros((4,)), np.zeros((4,))
+                                         , np.zeros((4,))
 
                                          )) - OBSERVATION_EPS)
 
@@ -290,7 +290,7 @@ class QuadrupedGymEnv(gym.Env):
                                           self._cpg.get_dtheta()
 
                                           , self.get_distance_and_angle_to_goal()
-                                          , contact_info[2], contact_info[3]
+                                          , contact_info[2]
                                           ))
 
     else:
@@ -426,7 +426,7 @@ class QuadrupedGymEnv(gym.Env):
     """ Implement your reward function here. How will you improve upon the above? """
 
     # reward += self._reward_flag_run()
-    reward = self._reward_fwd_locomotion(des_vel_x=1)
+    reward = self._reward_fwd_locomotion(des_vel_x=0.5)
 
     return reward
 
