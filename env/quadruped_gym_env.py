@@ -427,6 +427,7 @@ class QuadrupedGymEnv(gym.Env):
 
     # reward += self._reward_flag_run()
     reward = self._reward_fwd_locomotion(des_vel_x=0.5)
+    reward += self._reward_flag_run()
 
     return reward
 
@@ -523,7 +524,7 @@ class QuadrupedGymEnv(gym.Env):
     sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
 
     # scale ys to ranges
-    # front_foot_dy = self._scale_helper( u[8],  -self._cpg._max_step_len_rl,  self._cpg._max_step_len_rl)
+    front_foot_dy = self._scale_helper( u[8],  -self._cpg._max_step_len_rl/2,  self._cpg._max_step_len_rl/2)
 
     # get motor kp and kd gains (can be modified)
     kp = self._robot_config.MOTOR_KP # careful of size!
