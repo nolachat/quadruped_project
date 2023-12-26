@@ -258,7 +258,7 @@ class QuadrupedGymEnv(gym.Env):
     if self._motor_control_mode in ["PD","TORQUE", "CARTESIAN_PD"]:
       action_dim = 12
     elif self._motor_control_mode in ["CPG"]:
-      action_dim = 9
+      action_dim = 10
     else:
       raise ValueError("motor control mode " + self._motor_control_mode + " not implemented yet.")
     action_high = np.array([1] * action_dim)
@@ -355,19 +355,14 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_speed_tracking(self, des_vel=0.5):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity
-    b_q = self.robot.GetBaseOrientation()
-    phi = np.arctan2(2*(b_q[0]*b_q[1] + b_q[2]*b_q[3]), 1-2*(b_q[1]**2 + b_q[2]**2))
+    phi = self._pybullet_client.getEulerFromQuaternion(self.robot.GetBaseOrientation())[2]
+    print("heading_phi: ", np.rad2deg(phi))
     d_phi = np.array([np.cos(phi), np.sin(phi)])
 
     v_vec = self.robot.GetBaseLinearVelocity()[0:2]
     v = np.linalg.norm(v_vec)
 
     vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (v - des_vel)**2 ) * max(np.dot(d_phi,v_vec),0)/v
-
-    # minimize yaw (go straight)
-    # yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) 
-    # don't drift laterally 
-    # drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1])
 
     # minimize energy 
     energy_reward = 0 
@@ -425,8 +420,7 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self):
     """ Implement your reward function here. How will you improve upon the above? """
 
-    # reward += self._reward_flag_run()
-    reward = self._reward_fwd_locomotion(des_vel_x=0.5)
+    reward = self._reward_speed_tracking(des_vel=0.5)
     reward += self._reward_flag_run()
 
     return reward
@@ -524,7 +518,8 @@ class QuadrupedGymEnv(gym.Env):
     sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
 
     # scale ys to ranges
-    front_foot_dy = self._scale_helper( u[8],  -self._cpg._max_step_len_rl/2,  self._cpg._max_step_len_rl/2)
+    FL_dy = self._scale_helper( u[8],  -self._cpg._max_step_len_rl/2,  self._cpg._max_step_len_rl/2)
+    FR_dy = self._scale_helper( u[9],  -self._cpg._max_step_len_rl/2,  self._cpg._max_step_len_rl/2)
 
     # get motor kp and kd gains (can be modified)
     kp = self._robot_config.MOTOR_KP # careful of size!
@@ -539,7 +534,7 @@ class QuadrupedGymEnv(gym.Env):
       # get desired foot i pos (xi, yi, zi)
       x = xs[i]
       y = sideSign[i] * foot_y
-      y += front_foot_dy * ( i == 0 or i == 1)
+      y += FR_dy * ( i == 0 ) + FL_dy * (i == 1)
       z = zs[i]
 
       # call inverse kinematics to get corresponding joint angles
@@ -687,6 +682,7 @@ class QuadrupedGymEnv(gym.Env):
     self._goal_location = distance * np.array([np.cos(goal_angle), np.sin(goal_angle)], dtype=np.float64)
 
     self._goal_location += np.asarray(self.robot.GetBasePosition()[0:2])
+
 
     sh_colBox = self._pybullet_client.createCollisionShape(self._pybullet_client.GEOM_BOX,
         halfExtents=[0.2,0.2,0.2])
@@ -960,8 +956,9 @@ def test_env():
                         motor_control_mode='CPG',
                         action_repeat=100,
                         )
-
+  
   obs = env.reset()
+  
   print('obs len', len(obs))
   action_dim = env._action_dim
   action_low = -np.ones(action_dim)
