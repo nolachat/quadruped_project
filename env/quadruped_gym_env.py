@@ -539,7 +539,7 @@ class QuadrupedGymEnv(gym.Env):
       # get desired foot i pos (xi, yi, zi)
       x = xs[i]
       y = sideSign[i] * foot_y
-      # y += front_foot_dy * ( i == 0 or i == 1)
+      y += front_foot_dy * ( i == 0 or i == 1)
       z = zs[i]
 
       # call inverse kinematics to get corresponding joint angles
