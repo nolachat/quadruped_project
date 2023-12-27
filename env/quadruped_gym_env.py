@@ -258,7 +258,7 @@ class QuadrupedGymEnv(gym.Env):
     if self._motor_control_mode in ["PD","TORQUE", "CARTESIAN_PD"]:
       action_dim = 12
     elif self._motor_control_mode in ["CPG"]:
-      action_dim = 10
+      action_dim = 12
     else:
       raise ValueError("motor control mode " + self._motor_control_mode + " not implemented yet.")
     action_high = np.array([1] * action_dim)
@@ -518,8 +518,7 @@ class QuadrupedGymEnv(gym.Env):
     sideSign = np.array([-1, 1, -1, 1]) # get correct hip sign (body right is negative)
 
     # scale ys to ranges
-    FL_dy = self._scale_helper( u[8],  -self._cpg._max_step_len_rl/2,  self._cpg._max_step_len_rl/2)
-    FR_dy = self._scale_helper( u[9],  -self._cpg._max_step_len_rl/2,  self._cpg._max_step_len_rl/2)
+    dy = self._scale_helper( u[8:12],  -self._cpg._max_step_len_rl/2,  self._cpg._max_step_len_rl/2)
 
     # get motor kp and kd gains (can be modified)
     kp = self._robot_config.MOTOR_KP # careful of size!
@@ -534,7 +533,7 @@ class QuadrupedGymEnv(gym.Env):
       # get desired foot i pos (xi, yi, zi)
       x = xs[i]
       y = sideSign[i] * foot_y
-      y += FR_dy * ( i == 0 ) + FL_dy * (i == 1)
+      y += dy[i]
       z = zs[i]
 
       # call inverse kinematics to get corresponding joint angles
@@ -542,15 +541,6 @@ class QuadrupedGymEnv(gym.Env):
   
       # Add joint PD contribution to tau
       tau = np.diag(kp[3*i:3*i+3]) @ (q_des - q[3*i:3*i+3]) + np.diag(kd[3*i:3*i+3]) @ (-dq[3*i:3*i+3])
-
-      # add Cartesian PD contribution (as you wish)
-      if False:
-        kpCartesian = self._robot_config.kpCartesian
-        kdCartesian = self._robot_config.kdCartesian
-
-        J,pos = self.robot.ComputeJacobianAndPosition(i) 
-        v = J @ dq[3*i:3*i+3]
-        tau += J.T @ (kpCartesian @ (np.array([x,y,z])-pos) - kdCartesian @ v) # [/TODO]
 
       action[3*i:3*i+3] = tau
 
