@@ -421,7 +421,7 @@ class QuadrupedGymEnv(gym.Env):
     """ Implement your reward function here. How will you improve upon the above? """
 
     reward = self._reward_speed_tracking(des_vel=0.5)
-    reward += self._reward_flag_run()
+    # reward += self._reward_flag_run()
 
     return reward
 
