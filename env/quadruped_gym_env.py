@@ -273,6 +273,8 @@ class QuadrupedGymEnv(gym.Env):
                                           self.robot.GetMotorVelocities(),
                                           self.robot.GetBaseOrientation() ))
       
+      self.robot.Get
+      
     elif self._observation_space_mode == "LR_COURSE_OBS":
       # [TODO] Get observation from robot. What are reasonable measurements we could get on hardware?
       # if using the CPG, you can include states with self._cpg.get_r(), for example
@@ -355,14 +357,10 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_speed_tracking(self, des_vel=0.5):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity
-    phi = self._pybullet_client.getEulerFromQuaternion(self.robot.GetBaseOrientation())[2]
-    # print("heading_phi: ", np.rad2deg(phi))
-    d_phi = np.array([np.cos(phi), np.sin(phi)])
+    _, phi = self.get_distance_and_angle_to_goal()
+    v = np.linalg.norm(self.robot.GetBaseLinearVelocity()[0:2])
 
-    v_vec = self.robot.GetBaseLinearVelocity()[0:2]
-    v = np.linalg.norm(v_vec)
-
-    vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (v - des_vel)**2 ) * max(np.dot(d_phi,v_vec),0)/v
+    vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (v - des_vel)**2 ) * (1-np.abs(phi)/np.pi)
 
     # minimize energy 
     energy_reward = 0 
