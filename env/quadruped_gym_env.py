@@ -99,6 +99,7 @@ VIDEO_LOG_DIRECTORY = 'videos/' + datetime.datetime.now().strftime("vid-%Y-%m-%d
 
 
 EPISODE_LENGTH = 10   # how long before we reset the environment (max episode length for RL)
+EPISODE_LENGTH *= 2
 MAX_FWD_VELOCITY = 1  # to avoid exploiting simulator dynamics, cap max reward for body velocity 
 
 # CPG quantities
@@ -647,6 +648,12 @@ class QuadrupedGymEnv(gym.Env):
       if self._TASK_ENV == "FLAGRUN" or self._TASK_ENV == "LR_COURSE_TASK" :  
         self.goal_id = None
         self._reset_goal()
+
+        self._ground_mu_k = ground_mu_k = 0.8
+        self._pybullet_client.changeDynamics(self.plane, -1, lateralFriction=ground_mu_k)
+        self.add_competition_blocks()
+        self._add_noise = False # double check
+
         self.robust_setup()
 
 
