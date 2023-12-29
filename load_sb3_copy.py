@@ -62,7 +62,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'CPG_desireless_v2_Goal_3'
+log_dir = interm_dir + 'CPG_desireless_v2_Goal_4'
 # log_dir = interm_dir + 'v=1'
 
 # initialize env configs (render at test time)
@@ -109,7 +109,7 @@ episode_reward = 0
 
 # [TODO] initialize arrays to save data from simulation 
 #
-duration = 1 #[s]
+duration = 20 #[s]
 TIME_STEP = 0.001
 NSTEPS = int(duration//TIME_STEP)
 t = range(NSTEPS)

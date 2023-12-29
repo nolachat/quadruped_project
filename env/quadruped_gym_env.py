@@ -368,15 +368,19 @@ class QuadrupedGymEnv(gym.Env):
     for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
       energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
 
+    angular_velocity = self.robot.GetBaseAngularVelocity()[0:2]
+    
     # minimize roll
-    roll = self.robot.GetBaseAngularVelocity()[0]
-    roll_penalty = - 0.1 * roll
+    roll_penalty = - 0.1 * angular_velocity[0]
 
+    # minimise pitch
+    pitch_penalty = - 0.1 * angular_velocity[1]
 
     reward = vel_tracking_reward \
             - 0.01 * energy_reward \
             - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1])) \
-            + roll_penalty
+            + roll_penalty \
+            + pitch_penalty
 
     return max(reward,0) # keep rewards positive
   
