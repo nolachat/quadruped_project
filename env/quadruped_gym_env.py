@@ -127,7 +127,7 @@ class QuadrupedGymEnv(gym.Env):
       render=False,
       record_video=False,
       add_noise=True,
-      test_env=True,
+      test_env=False,
       competition_env=False, # NOT ALLOWED FOR TRAINING!
       **kwargs): # any extra arguments from legacy
     """Initialize the quadruped gym environment.
@@ -367,9 +367,15 @@ class QuadrupedGymEnv(gym.Env):
     for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
       energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
 
+    # minimize roll
+    roll = self.robot.GetBaseAngularVelocity()[0]
+    roll_penalty = - 0.1 * roll
+
+
     reward = vel_tracking_reward \
             - 0.01 * energy_reward \
-            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
+            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1])) \
+            + roll_penalty
 
     return max(reward,0) # keep rewards positive
   
@@ -401,8 +407,8 @@ class QuadrupedGymEnv(gym.Env):
     # minimize distance to goal (we want to move towards the goal)
     dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
     # minimize yaw deviation to goal (necessary?)
-    yaw_reward = 0
-    # yaw_reward = -0.1 * np.abs(angle) 
+    # yaw_reward = 0
+    yaw_reward = -0.1 * np.abs(angle) 
 
     # minimize energy 
     energy_reward = 0 
@@ -641,6 +647,8 @@ class QuadrupedGymEnv(gym.Env):
       if self._TASK_ENV == "FLAGRUN" or self._TASK_ENV == "LR_COURSE_TASK" :  
         self.goal_id = None
         self._reset_goal()
+        self.robust_setup()
+
 
     else:
       self.robot.Reset(reload_urdf=False)
@@ -947,6 +955,40 @@ class QuadrupedGymEnv(gym.Env):
     for i in range(-1,self._pybullet_client.getNumJoints(quad_ID)):
       self._pybullet_client.setCollisionFilterPair(quad_ID,base_block_ID, i,-1, 0)
 
+  def robust_setup(self, num_rand=100, z_height=0.04):
+    """Add random boxes in front of the robot in x [0.5, 20] and y [-3,3] """
+    # x location
+    x_low, x_upp = 0.5, 20
+    # y location
+    y_low, y_upp = -3, 3
+    # block dimensions
+    block_x_min, block_x_max = 0.1, 1
+    block_y_min, block_y_max = 0.1, 1
+    z_low, z_upp = 0.005, z_height
+    # block orientations
+    roll_low, roll_upp = -0.01, 0.01
+    pitch_low, pitch_upp = -0.01, 0.01 
+    yaw_low, yaw_upp = -np.pi, np.pi
+
+    x = x_low + np.random.random(num_rand) * (x_upp - x_low)
+    y = y_low + np.random.random(num_rand) * (y_upp - y_low)
+    z = z_low + np.random.random(num_rand) * (z_upp - z_low)
+    block_x = self.scale_rand(num_rand,block_x_min,block_x_max)
+    block_y = self.scale_rand(num_rand,block_y_min,block_y_max)
+    roll = self.scale_rand(num_rand,roll_low,roll_upp)
+    pitch = self.scale_rand(num_rand,pitch_low,pitch_upp)
+    yaw = self.scale_rand(num_rand,yaw_low,yaw_upp)
+    # loop through
+    for i in range(num_rand):
+      sh_colBox = self._pybullet_client.createCollisionShape(self._pybullet_client.GEOM_BOX,
+          halfExtents=[block_x[i]/2,block_y[i]/2,z[i]/2])
+      orn = self._pybullet_client.getQuaternionFromEuler([roll[i],pitch[i],yaw[i]])
+      block2=self._pybullet_client.createMultiBody(baseMass=0,baseCollisionShapeIndex = sh_colBox,
+                            basePosition = [x[i],y[i],z[i]/2],baseOrientation=orn)
+      # set friction coeff
+      self._pybullet_client.changeDynamics(block2, -1, lateralFriction=self._ground_mu_k)
+
+    self._add_base_mass_offset()
 
 def test_env():
   env = QuadrupedGymEnv(render=True, 
