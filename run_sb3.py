@@ -68,12 +68,12 @@ else:
 
 if LOAD_NN:
     interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'CPG_desireless_v2_Goal_3' # add path
+    log_dir = interm_dir + 'CPG_desireless_v2_Goal_4' # add path
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-train_name = 'CPG_desireless_v2_Goal_4'
+train_name = 'CPG_desireless_v2_Goal_5'
 SAVE_PATH = './logs/intermediate_models/'+ train_name + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
