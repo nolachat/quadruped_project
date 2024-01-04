@@ -95,11 +95,11 @@ else:
 policy_kwargs = dict(net_arch=[256,256])
 # What are these hyperparameters? Check here: https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html
 n_steps = 4096 
-learning_rate = lambda f: 1e-4
+learning_rate = lambda f: 1e-3
 
 ppo_config = {  "gamma":0.99, 
                 "n_steps": int(n_steps/NUM_ENVS), 
-                "ent_coef":0.0, 
+                "ent_coef":0.0001, 
                 "learning_rate":learning_rate, 
                 "vf_coef":0.5,
                 "max_grad_norm":0.5, 

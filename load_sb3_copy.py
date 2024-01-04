@@ -62,7 +62,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'mass_robustness_flat_terrain'
+log_dir = interm_dir + 'mass_robustness_flat_terrain_2'
 # log_dir = interm_dir + 'v=1'
 
 # initialize env configs (render at test time)
@@ -196,7 +196,7 @@ fig, ax = plt.subplots()
 ax.plot(base_speed[START_STEP:PlOT_STEPS], label='Speed |v(x,y)|')
 ax.set_title('Evolution of speed')
 ax.set_xlabel('Timesteps')
-ax.set_ylabel('Speed (m/s)')
+ax.set_ylabel('Speed [m/s]')
 ax.legend()
 ax.grid(True)
 
@@ -210,16 +210,14 @@ plt.show()
 fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(10, 8), sharex=True)
 
 # Plotting dy components in the first subplot
-ax1.plot(t[START_STEP:PlOT_STEPS], dy[0, START_STEP:PlOT_STEPS], label='lateral displacement on FR Leg')
-ax1.plot(t[START_STEP:PlOT_STEPS], dy[1, START_STEP:PlOT_STEPS], label='lateral displacement on FL Leg')
-ax1.set_ylabel('Values')
+ax1.plot(t[START_STEP:PlOT_STEPS], dy[0, START_STEP:PlOT_STEPS], label='lateral displacement on FR Leg [m]')
+ax1.plot(t[START_STEP:PlOT_STEPS], dy[1, START_STEP:PlOT_STEPS], label='lateral displacement on FL Leg [m]')
 ax1.legend()
 
 # Plotting w_z and goal_angle in the second subplot
 ax2.plot(w_z[START_STEP:PlOT_STEPS], label='rotation speed, w_z [rad/s]')
-ax2.plot(goal_angle[START_STEP:PlOT_STEPS], label='Angular difference to the goal')
-ax2.set_xlabel('Time')
-ax2.set_ylabel('Values')
+ax2.plot(goal_angle[START_STEP:PlOT_STEPS], label='Angular difference to the goal [rad]')
+ax2.set_xlabel('Timesteps')
 ax2.legend()
 
 # Adding a title for the entire figure

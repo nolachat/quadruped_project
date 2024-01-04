@@ -273,9 +273,7 @@ class QuadrupedGymEnv(gym.Env):
       self._observation = np.concatenate((self.robot.GetMotorAngles(), 
                                           self.robot.GetMotorVelocities(),
                                           self.robot.GetBaseOrientation() ))
-      
-      self.robot.Get
-      
+            
     elif self._observation_space_mode == "LR_COURSE_OBS":
       # [TODO] Get observation from robot. What are reasonable measurements we could get on hardware?
       # if using the CPG, you can include states with self._cpg.get_r(), for example
@@ -358,8 +356,11 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_speed_tracking(self, des_vel=0.5):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity
-    _, phi = self.get_distance_and_angle_to_goal()
+    dist, phi = self.get_distance_and_angle_to_goal()
     v = np.linalg.norm(self.robot.GetBaseLinearVelocity()[0:2])
+
+    d_min = 3
+    phi *= np.clip(1-dist/d_min/2,a_min=0.5, a_max=1)
 
     vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (v - des_vel)**2 ) * (1-np.abs(phi)/np.pi)
 
@@ -368,19 +369,23 @@ class QuadrupedGymEnv(gym.Env):
     for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
       energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
 
-    angular_velocity = self.robot.GetBaseAngularVelocity()[0:2]
+    # angular_velocity = self.robot.GetBaseAngularVelocity()[0:2]
+    angular_position = self.robot.GetBaseOrientationRollPitchYaw()[0:2]
     
     # minimize roll
-    roll_penalty = - 0.1 * angular_velocity[0]
+    # roll_penalty = - 0.1 * angular_velocity[0]
+    roll_penalty = - 0.5 * angular_position[0]
 
     # minimise pitch
-    pitch_penalty = - 0.1 * angular_velocity[1]
+    # pitch_penalty = - 0.1 * angular_velocity[1]
+    pitch_penalty = - 0.5 * angular_position[1]
 
     reward = vel_tracking_reward \
             - 0.01 * energy_reward \
             - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1])) \
             + roll_penalty \
-            + pitch_penalty
+            + pitch_penalty \
+            - 10*self.is_fallen()
 
     return max(reward,0) # keep rewards positive
   
@@ -412,8 +417,8 @@ class QuadrupedGymEnv(gym.Env):
     # minimize distance to goal (we want to move towards the goal)
     dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
     # minimize yaw deviation to goal (necessary?)
-    # yaw_reward = 0
-    yaw_reward = -0.1 * np.abs(angle) 
+    yaw_reward = 0
+    # yaw_reward = -0.1 * np.abs(angle) 
 
     # minimize energy 
     energy_reward = 0 
@@ -551,15 +556,6 @@ class QuadrupedGymEnv(gym.Env):
   
       # Add joint PD contribution to tau
       tau = np.diag(kp[3*i:3*i+3]) @ (q_des - q[3*i:3*i+3]) + np.diag(kd[3*i:3*i+3]) @ (-dq[3*i:3*i+3])
-
-      # add Cartesian PD contribution (as you wish)
-      if False:
-        kpCartesian = self._robot_config.kpCartesian
-        kdCartesian = self._robot_config.kdCartesian
-
-        J,pos = self.robot.ComputeJacobianAndPosition(i) 
-        v = J @ dq[3*i:3*i+3]
-        tau += J.T @ (kpCartesian @ (np.array([x,y,z])-pos) - kdCartesian @ v) # [/TODO]
 
       action[3*i:3*i+3] = tau
 
