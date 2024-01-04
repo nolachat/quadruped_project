@@ -655,11 +655,10 @@ class QuadrupedGymEnv(gym.Env):
 
         self._ground_mu_k = ground_mu_k = 0.8
         self._pybullet_client.changeDynamics(self.plane, -1, lateralFriction=ground_mu_k)
-        self.add_competition_blocks()
         self._add_noise = False # double check
 
-        self.robust_setup()
-
+        # self.robust_setup()
+        self._add_base_mass_offset()
 
     else:
       self.robot.Reset(reload_urdf=False)
@@ -947,6 +946,8 @@ class QuadrupedGymEnv(gym.Env):
       print('Mass:', base_mass, 'location:', block_pos_delta_base_frame)
       # if rendering, also want to set the halfExtents accordingly 
       # 1 kg water is 0.001 cubic meters 
+      # Save data to a file
+
       boxSizeHalf = [(base_mass*0.001)**(1/3) / 2]*3
       translationalOffset = [0,0,0.1]
     else:
@@ -998,8 +999,6 @@ class QuadrupedGymEnv(gym.Env):
                             basePosition = [x[i],y[i],z[i]/2],baseOrientation=orn)
       # set friction coeff
       self._pybullet_client.changeDynamics(block2, -1, lateralFriction=self._ground_mu_k)
-
-    self._add_base_mass_offset()
 
 def test_env():
   env = QuadrupedGymEnv(render=True, 

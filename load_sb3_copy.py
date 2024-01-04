@@ -62,7 +62,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'CPG_desireless_v2_Goal_4'
+log_dir = interm_dir + 'mass_robustness_flat_terrain'
 # log_dir = interm_dir + 'v=1'
 
 # initialize env configs (render at test time)
@@ -108,18 +108,29 @@ obs = env.reset()
 episode_reward = 0
 
 # [TODO] initialize arrays to save data from simulation 
-#
-duration = 20 #[s]
+
+
+
+duration = 2 #[s]
 TIME_STEP = 0.001
 NSTEPS = int(duration//TIME_STEP)
 t = range(NSTEPS)
+
+PlOT_STEPS = TIME_STEP
+START_STEP = 0
 
 amplitudes = np.zeros((4,len(t)))
 phases = np.zeros((4,len(t)))
 amplitudes_derivative = np.zeros((4,len(t)))
 phases_derivative = np.zeros((4,len(t)))
 
-base_speed = np.zeros((1,len(t)))
+base_speed = np.zeros((len(t),))
+
+dy = np.zeros((2,len(t)))
+
+w_z = np.zeros((len(t),))
+
+goal_angle = np.zeros((len(t),))
 
 for i in range(NSTEPS):
     action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
@@ -129,26 +140,35 @@ for i in range(NSTEPS):
         print('episode_reward', episode_reward)
         print('Final base position', info[0]['base_pos'])
         episode_reward = 0
+        PlOT_STEPS = i
+        break
 
     # [TODO] save data from current robot states for plots 
     # To get base position, for example: env.envs[0].env.robot.GetBasePosition() 
-    # 
+
+    # CPG states
     amplitudes[:,i] = env.envs[0].env._cpg.get_r()
     phases[:,i] = env.envs[0].env._cpg.get_theta()
     amplitudes_derivative[:,i] = env.envs[0].env._cpg.get_dr()
     phases_derivative[:,i] = env.envs[0].env._cpg.get_dtheta()
-    base_speed[:,i] = env.envs[0].env.robot.GetBaseLinearVelocity()[0]
+
+    base_speed[i] = np.linalg.norm(env.envs[0].env.robot.GetBaseLinearVelocity()[0:2])
+
+
+    _, p0 = env.envs[0].env.robot.ComputeJacobianAndPosition(0)
+    dy[0,i] =  p0[1]
+    _, p1 = env.envs[0].env.robot.ComputeJacobianAndPosition(1)
+    dy[1,i] =  p1[1]
+
+    w_z[i] = env.envs[0].env.robot.GetBaseAngularVelocity()[2]
+
+    d, angle = env.envs[0].env.get_distance_and_angle_to_goal()
+    goal_angle[i] = angle
+
 
 # [TODO] make plots:
-
-# PlOT_STEPS = int(1.2 // (TIME_STEP))
-# START_STEP = int(0 // (TIME_STEP))
-    
-PlOT_STEPS = 600
-START_STEP = 400
-
-
 legID_Name = {0: "FR Leg", 1: "FL Leg", 2: "RR Leg", 3: "RL Leg"}
+
 
 # Create four subplots
 fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
@@ -166,16 +186,44 @@ plt.legend()
 plt.suptitle(f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$)', fontsize=16)
 plt.show()
 
-mean_speed = np.mean(base_speed[0])
-std = np.std(base_speed[0])
 
-# Plotting
+## Plotting velocity states
+mean_speed = np.mean(base_speed[START_STEP:PlOT_STEPS])
+std = np.std(base_speed[START_STEP:PlOT_STEPS])
+
 fig, ax = plt.subplots()
 
-ax.plot(t, base_speed[0], label='Speed along x')
-ax.set_title('Speed along x axis')
+ax.plot(base_speed[START_STEP:PlOT_STEPS], label='Speed |v(x,y)|')
+ax.set_title('Evolution of speed')
 ax.set_xlabel('Timesteps')
 ax.set_ylabel('Speed (m/s)')
 ax.legend()
 ax.grid(True)
+
+# Add mean and std as text
+ax.text(0.05, 0.95, f'Mean: {mean_speed:.2f} m/s\nStd: {std:.2f} m/s', 
+        transform=ax.transAxes, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.8))
+
+plt.show()
+
+# Creating a figure with two subplots
+fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(10, 8), sharex=True)
+
+# Plotting dy components in the first subplot
+ax1.plot(t[START_STEP:PlOT_STEPS], dy[0, START_STEP:PlOT_STEPS], label='lateral displacement on FR Leg')
+ax1.plot(t[START_STEP:PlOT_STEPS], dy[1, START_STEP:PlOT_STEPS], label='lateral displacement on FL Leg')
+ax1.set_ylabel('Values')
+ax1.legend()
+
+# Plotting w_z and goal_angle in the second subplot
+ax2.plot(w_z[START_STEP:PlOT_STEPS], label='rotation speed, w_z [rad/s]')
+ax2.plot(goal_angle[START_STEP:PlOT_STEPS], label='Angular difference to the goal')
+ax2.set_xlabel('Time')
+ax2.set_ylabel('Values')
+ax2.legend()
+
+# Adding a title for the entire figure
+fig.suptitle('Plots of dy[FR], dy[FL], w_z, and goal_angle')
+
+# Display the plot
 plt.show()
