@@ -58,7 +58,7 @@ USE_GPU = False # make sure to install all necessary drivers
 #                "observation_space_mode": "LR_COURSE_OBS"}
 
 env_configs = {"motor_control_mode":"CARTESIAN_PD",
-               "task_env": "LR_COURSE_TASK",
+               "task_env": "FWD_LOCOMOTION",
                "observation_space_mode": "LR_COURSE_OBS"}
 
 if USE_GPU and LEARNING_ALG=="SAC":
@@ -68,12 +68,12 @@ else:
 
 if LOAD_NN:
     interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'G=fwd(0.5)_Mandaw' # add path
+    log_dir = interm_dir + 'Bou_2' # add path
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-train_name = 'G=fwd(0.5)_heightTrack_maxStride'
+train_name = 'Bou_3'
 SAVE_PATH = './logs/intermediate_models/'+ train_name + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically

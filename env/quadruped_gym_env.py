@@ -121,9 +121,9 @@ class QuadrupedGymEnv(gym.Env):
       action_repeat=10,  
       distance_weight=2,
       energy_weight=0.008,
-      motor_control_mode="PD",
-      task_env="FWD_LOCOMOTION",
-      observation_space_mode="DEFAULT",
+      motor_control_mode="CARTESIAN_PD",
+      task_env="LR_COURSE_TASK",
+      observation_space_mode="LR_COURSE_OBS",
       on_rack=False,
       render=False,
       record_video=False,
@@ -190,6 +190,9 @@ class QuadrupedGymEnv(gym.Env):
     self._MAX_EP_LEN = EPISODE_LENGTH # max sim time in seconds, arbitrary
     self._action_bound = 1.0
 
+    self.last_contact_time = np.zeros(self._robot_config.NUM_LEGS)
+    self.is_foot_in_contact = np.zeros(self._robot_config.NUM_LEGS, dtype=bool)
+
     # if using CPG
     self.setupCPG()
 
@@ -206,7 +209,7 @@ class QuadrupedGymEnv(gym.Env):
     self.reset()
  
   def setupCPG(self):
-    self._cpg = HopfNetwork(use_RL=True)
+    self._cpg = HopfNetwork(use_RL=True,gait="BOUND")
 
   ######################################################################################
   # RL Observation and Action spaces 
@@ -223,29 +226,13 @@ class QuadrupedGymEnv(gym.Env):
       
     elif self._observation_space_mode == "LR_COURSE_OBS":
 
-      observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
-                                         self._robot_config.VELOCITY_LIMITS,
-                                         np.array([1.0]*4)
-                                         
-                                         , np.array([5]*3)
-                                         , np.array([2*np.pi]*3)
-
-                                         , 3*self._robot_config.TORQUE_LIMITS[0:4]+80, np.ones((4,))
-                                         , np.array([np.sqrt(2)*4, np.pi])
-
-                                            )) + OBSERVATION_EPS)
+      observation_high = (np.concatenate((np.array([20.0,3.0,1]*4),
+                                          self._robot_config.VELOCITY_LIMITS,
+                                          np.array([1.0]*4))) + OBSERVATION_EPS)
       
-      observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
+      observation_low = (np.concatenate((np.array([-1.0,-3.0,-1]*4),
                                          -self._robot_config.VELOCITY_LIMITS,
-                                         np.array([-1.0]*4)
-                                         
-                                         , np.array([-5]*3)
-                                         , np.zeros((3,))
-
-                                         , np.zeros((4,)), np.zeros((4,))
-                                         , np.array([0, -np.pi]) 
-
-                                         )) - OBSERVATION_EPS)
+                                         np.array([-1.0]*4))) - OBSERVATION_EPS)
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -278,18 +265,17 @@ class QuadrupedGymEnv(gym.Env):
 
       contact_info = self.robot.GetContactInfo()
 
+      J, pos = zip(*[self.robot.ComputeJacobianAndPosition(i) for i in range(4)])
+      v = [J[i] @ self.robot.GetMotorVelocities()[3*i:3*i+3] for i in range(4)]
 
-      self._observation = np.concatenate((self.robot.GetMotorAngles(), 
-                                          self.robot.GetMotorVelocities(),
-                                          self.robot.GetBaseOrientation()
-                                          
-                                          , self.robot.GetBaseLinearVelocity()
-                                          , np.mod(self.robot.GetBaseOrientationRollPitchYaw(), np.array([2*np.pi]*3))
+      p_flat = np.concatenate(pos)
+      v_flat = np.concatenate(v)
 
-                                          , contact_info[2], contact_info[3]
-                                          , self.get_distance_and_angle_to_goal()
+      body_orientation = self.robot.GetBaseOrientation()
 
-                                            ))
+      self._observation = np.concatenate((p_flat,
+                                          v_flat,
+                                          body_orientation ))
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -329,24 +315,63 @@ class QuadrupedGymEnv(gym.Env):
     """Decide whether we should stop the episode and reset the environment. """
     return self.is_fallen() 
 
-  def _reward_fwd_locomotion(self, des_vel_x=0.5):
+  def UpdateContactTimes(self):
+      numValidContacts, numInvalidContacts, feetNormalForces, feetInContactBool = self.robot.GetContactInfo()
+      current_time = self.get_sim_time()
+      for i in range(self._robot_config.NUM_LEGS):
+        # If the foot is in contact now but was not in the last step, update the time
+        if feetInContactBool[i] and not self.is_foot_in_contact[i]:
+          self.last_contact_time[i] = current_time
+        # Update the in-contact status
+        self.is_foot_in_contact[i] = feetInContactBool[i]
+
+  def CalculateSwingReward(self):
+    swing_reward = 0.0
+        # Calculate the swing reward based on the last swing times for each foot
+    for i in range(self._robot_config.NUM_LEGS):
+      # Only calculate swing reward if the foot is not in contact
+      if not self.is_foot_in_contact[i]:
+          time_since_last_contact = self.get_sim_time() - self.last_contact_time[i]
+          swing_reward += max(0, time_since_last_contact - 0.5)
+    return swing_reward
+  
+  def _reward_fwd_locomotion(self, des_vel_x=1):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity 
-    vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
+    self.UpdateContactTimes()
+    #vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
+    vel_tracking_reward = 1 - abs(self.robot.GetBaseLinearVelocity()[0] - des_vel_x)
     # minimize yaw (go straight)
     yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) 
+    roll_penalty = 0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[0]) 
     # don't drift laterally 
-    drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1]) 
+    drift_reward = -0.1 * abs(self.robot.GetBasePosition()[1]) 
+
+    penalty = 0
+    if self.is_fallen():
+      penalty = -10
+
     # minimize energy 
     energy_reward = 0 
     for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
       energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
 
-    reward = vel_tracking_reward \
+    height = 0.1 * abs(self.robot.GetBasePosition()[2] -  0.305)
+    #height = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBasePosition()[2] - self._robot_config.INIT_POSITION[2])**2 )
+
+    swing = 0.2 * self.CalculateSwingReward()
+
+    reward = 0.1 * vel_tracking_reward \
             + yaw_reward \
             + drift_reward \
-            - 0.05 * energy_reward \
-            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
+            + swing \
+            - 0.01 * energy_reward \
+            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))\
+            - height\
+            - roll_penalty\
+            + penalty
+
+    
 
     return max(reward,0) # keep rewards positive
 
@@ -415,15 +440,36 @@ class QuadrupedGymEnv(gym.Env):
     
     return max(reward,0) # keep rewards positive
     
-  def _reward_lr_course(self):
+  def _reward_lr_course(self, des_vel_x=0.5):
     """ Implement your reward function here. How will you improve upon the above? """
 
-    reward = self._reward_fwd_locomotion(des_vel_x=0.5)
+    forward_velocity = self.robot.GetBaseLinearVelocity()[0]
+    velocity_reward = np.exp(-1 / 0.25 * (forward_velocity - des_vel_x)**2)
 
-    reward += self._height_tracking_reward()
-    reward += self._stride_reward()
+    J, pos = zip(*[self.robot.ComputeJacobianAndPosition(i) for i in range(4)])
+    p_flat = np.concatenate(pos)
+    sideSign = np.array([-1, 1, -1, 1])
+    foot_y = 0.0838  # this is the hip length
+    xs, zs = self._cpg.update()
+    leg_coordinates = []
 
-    return reward
+    for i in range(4):
+      leg_coordinates.append(xs[i])          # x-coordinate
+      leg_coordinates.append(sideSign[i] * foot_y)  # y-coordinate
+      leg_coordinates.append(zs[i])          # z-coordinate
+
+    leg_des = np.array(leg_coordinates)
+
+    # Penalize for inaccurate foot placements (example)
+    foot_placement_penalty = sum(leg_des-p_flat)
+
+    energy_reward = 0 
+    for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
+      energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
+
+    # Combine the rewards and penalties
+    reward = velocity_reward - 0.005 * foot_placement_penalty - 0.005 * energy_reward
+    return max(reward,0)
 
   def _reward(self):
     """ Get reward depending on task"""
@@ -463,11 +509,18 @@ class QuadrupedGymEnv(gym.Env):
     """Scale RL action to Cartesian PD ranges. 
     Edit ranges, limits etc., but make sure to use Cartesian PD to compute the torques. 
     """
+
     # clip RL actions to be between -1 and 1 (standard RL technique)
-    u = np.clip(actions,-1,1)
+    front_legs_action = (actions[0:3] + actions[3:6]) / 2
+    rear_legs_action = (actions[6:9] + actions[9:12]) / 2
+
+    # Apply synchronized actions to both legs in each pair
+    s_actions = np.concatenate([front_legs_action, front_legs_action, rear_legs_action, rear_legs_action])
+
+    u = np.clip(s_actions,-1,1)
     # scale to corresponding desired foot positions (i.e. ranges in x,y,z we allow the agent to choose foot positions)
     # [TODO: edit (do you think these should these be increased? How limiting is this?)]
-    scale_array = np.array([0.1, 0.05, 0.08]*4)
+    scale_array = np.array([0.2, 0.05, 0.08]*4)
     # add to nominal foot position in leg frame (what are the final ranges?)
     des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME + scale_array*u
 
@@ -491,7 +544,8 @@ class QuadrupedGymEnv(gym.Env):
       # [TODO]
       v = J @ qd[3*i:3*i+3]
       # calculate torques with Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-      tau = J.T @ (kpCartesian @ (Pd-pos) + kdCartesian @ (vd-v)) # [TODO]
+      tau = np.zeros(3)
+      tau = tau + J.T @ (kpCartesian @ (Pd-pos) + kdCartesian @ (-v)) # [TODO]
 
       action[3*i:3*i+3] = tau
 
@@ -937,10 +991,10 @@ class QuadrupedGymEnv(gym.Env):
 def test_env():
   env = QuadrupedGymEnv(render=True, 
                         on_rack=False,
-                        motor_control_mode='CPG',
+                        motor_control_mode='CARTESIAN_PD',
                         action_repeat=100,
                         )
-
+  
   obs = env.reset()
   print('obs len', len(obs))
   action_dim = env._action_dim

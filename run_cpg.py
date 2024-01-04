@@ -56,7 +56,7 @@ env = QuadrupedGymEnv(render=True,              # visualize
                     isRLGymInterface=False,     # not using RL
                     time_step=TIME_STEP,
                     action_repeat=1,
-                    motor_control_mode="TORQUE",
+                    motor_control_mode="CARTESIAN_PD",
                     add_noise=False,    # start in ideal conditions
                     # record_video=True
                     )
@@ -64,10 +64,10 @@ env = QuadrupedGymEnv(render=True,              # visualize
 # initialize Hopf Network, supply gait
 # cpg = HopfNetwork(time_step=TIME_STEP)
 gait = "BOUND"
-cpg = HopfNetwork(time_step=TIME_STEP, gait=gait)
+cpg = HopfNetwork(time_step=TIME_STEP, gait="BOUND")
 
 
-TEST_STEPS = int(2 / (TIME_STEP))
+TEST_STEPS = int(3 / (TIME_STEP))
 t = np.arange(TEST_STEPS)*TIME_STEP
 
 # [/TODO] initialize data structures to save CPG and robot states
@@ -82,7 +82,7 @@ kp=np.array([100,100,100])
 kd=np.array([2,2,2])
 # Cartesian PD gains
 kpCartesian = np.diag([500]*3)
-kdCartesian = np.diag([20]*3)
+kdCartesian = np.diag([10]*3)
 
 for j in range(TEST_STEPS):
   # initialize torque array to send to motors
@@ -102,7 +102,8 @@ for j in range(TEST_STEPS):
     # call inverse kinematics to get corresponding joint angles (see ComputeInverseKinematics() in quadruped.py)
     leg_q = env.robot.ComputeInverseKinematics(i,leg_xyz) # [/TODO] 
     # Add joint PD contribution to tau for leg i (Equation 4)
-    tau =tau+ kp * (leg_q-q[3*i:3*i+3]) + kd * (-dq[3*i:3*i+3])# [/TODO] 
+    tau =0
+    #tau =tau+ kp * (leg_q-q[3*i:3*i+3]) + kd * (-dq[3*i:3*i+3])# [/TODO] 
     # add Cartesian PD contribution
     if ADD_CARTESIAN_PD:
       # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
@@ -110,7 +111,7 @@ for j in range(TEST_STEPS):
       # Get current foot velocity in leg frame (Equation 2)
       v = J @ dq[3*i:3*i+3] # [TODO] 
       # Calculate torque contribution from Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-      tau =tau+ J.T @ (np.matmul(kpCartesian,(leg_xyz-pos))+np.matmul(kdCartesian,(-v))) # [/TODO]
+      tau = tau+ J.T @ (np.matmul(kpCartesian,(leg_xyz-pos))+np.matmul(kdCartesian,(-v))) # [/TODO]
   
     action[3*i:3*i+3] = tau
 
