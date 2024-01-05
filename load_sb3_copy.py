@@ -77,7 +77,7 @@ env_config = {"motor_control_mode":"CPG",
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "DEFAULT"}
 
-env_config['render'] = True
+env_config['render'] = False
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 # env_config['competition_env'] = True
@@ -109,14 +109,12 @@ episode_reward = 0
 
 # [TODO] initialize arrays to save data from simulation 
 
-
-
-duration = 2 #[s]
+duration = 4 # total number of simulations (has to be multiplied by quaddrup ep len multiplier...)
 TIME_STEP = 0.001
 NSTEPS = int(duration//TIME_STEP)
 t = range(NSTEPS)
 
-PlOT_STEPS = TIME_STEP
+PlOT_STEPS = 1
 START_STEP = 0
 
 amplitudes = np.zeros((4,len(t)))
@@ -132,6 +130,8 @@ w_z = np.zeros((len(t),))
 
 goal_angle = np.zeros((len(t),))
 
+mass_offset = []
+
 for i in range(NSTEPS):
     action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
     obs, rewards, dones, info = env.step(action)
@@ -140,8 +140,11 @@ for i in range(NSTEPS):
         print('episode_reward', episode_reward)
         print('Final base position', info[0]['base_pos'])
         episode_reward = 0
-        PlOT_STEPS = i
-        break
+        mass_offset = np.append(mass_offset, env.envs[0].env.mass_offset)
+        print("N iteration:", i)
+
+        if PlOT_STEPS == 1:
+            PlOT_STEPS = i # to plot the first sim only
 
     # [TODO] save data from current robot states for plots 
     # To get base position, for example: env.envs[0].env.robot.GetBasePosition() 
@@ -225,3 +228,5 @@ fig.suptitle('Plots of dy[FR], dy[FL], w_z, and goal_angle')
 
 # Display the plot
 plt.show()
+
+print("mass offset: ===================== ", mass_offset)

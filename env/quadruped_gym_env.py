@@ -99,7 +99,7 @@ VIDEO_LOG_DIRECTORY = 'videos/' + datetime.datetime.now().strftime("vid-%Y-%m-%d
 
 
 EPISODE_LENGTH = 10   # how long before we reset the environment (max episode length for RL)
-EPISODE_LENGTH *= 2
+EPISODE_LENGTH *= 1
 MAX_FWD_VELOCITY = 1  # to avoid exploiting simulator dynamics, cap max reward for body velocity 
 
 # CPG quantities
@@ -935,8 +935,6 @@ class QuadrupedGymEnv(gym.Env):
       print('Mass:', base_mass, 'location:', block_pos_delta_base_frame)
       # if rendering, also want to set the halfExtents accordingly 
       # 1 kg water is 0.001 cubic meters 
-      # Save data to a file
-
       boxSizeHalf = [(base_mass*0.001)**(1/3) / 2]*3
       translationalOffset = [0,0,0.1]
     else:
@@ -955,6 +953,8 @@ class QuadrupedGymEnv(gym.Env):
     # disable self collision between box and each link
     for i in range(-1,self._pybullet_client.getNumJoints(quad_ID)):
       self._pybullet_client.setCollisionFilterPair(quad_ID,base_block_ID, i,-1, 0)
+    
+    self.mass_offset = np.concatenate((block_pos_delta_base_frame,np.array([base_mass])))
 
   def robust_setup(self, num_rand=100, z_height=0.04):
     """Add random boxes in front of the robot in x [0.5, 20] and y [-3,3] """
