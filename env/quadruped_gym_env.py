@@ -359,9 +359,7 @@ class QuadrupedGymEnv(gym.Env):
     dist, phi = self.get_distance_and_angle_to_goal()
     v = np.linalg.norm(self.robot.GetBaseLinearVelocity()[0:2])
 
-    d_min = 3
-    phi *= np.clip(1-dist/d_min/2,a_min=0.5, a_max=1)
-
+    phi = np.clip(phi, a_min=-np.pi/3, a_max=np.pi/3) # do not completely turn, to avoid falling
     vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (v - des_vel)**2 ) * (1-np.abs(phi)/np.pi)
 
     # minimize energy 
@@ -371,22 +369,17 @@ class QuadrupedGymEnv(gym.Env):
 
     # angular_velocity = self.robot.GetBaseAngularVelocity()[0:2]
     angular_position = self.robot.GetBaseOrientationRollPitchYaw()[0:2]
-    
     # minimize roll
-    # roll_penalty = - 0.1 * angular_velocity[0]
     roll_penalty = - 0.5 * angular_position[0]
-
     # minimise pitch
-    # pitch_penalty = - 0.1 * angular_velocity[1]
     pitch_penalty = - 0.5 * angular_position[1]
 
     reward = vel_tracking_reward \
             - 0.01 * energy_reward \
             - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1])) \
             + roll_penalty \
-            + pitch_penalty \
-            - 10*self.is_fallen()
-
+            + pitch_penalty
+    
     return max(reward,0) # keep rewards positive
   
   def get_distance_and_angle_to_goal(self):
