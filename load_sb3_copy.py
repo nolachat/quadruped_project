@@ -62,7 +62,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'CPG_desireless_v2_Goal_4'
+log_dir = interm_dir + 'smoother_turns&mass_offset'
 # log_dir = interm_dir + 'v=1'
 
 # initialize env configs (render at test time)
@@ -77,7 +77,7 @@ env_config = {"motor_control_mode":"CPG",
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "DEFAULT"}
 
-env_config['render'] = False
+env_config['render'] = True
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 # env_config['competition_env'] = True
@@ -109,7 +109,7 @@ episode_reward = 0
 
 # [TODO] initialize arrays to save data from simulation 
 
-duration = 4 # total number of simulations (has to be multiplied by quaddrup ep len multiplier...)
+duration = 1 # total number of simulations (has to be multiplied by quaddrup ep len multiplier...)
 TIME_STEP = 0.001
 NSTEPS = int(duration//TIME_STEP)
 t = range(NSTEPS)
@@ -221,6 +221,7 @@ ax1.legend()
 ax2.plot(w_z[START_STEP:PlOT_STEPS], label='rotation speed, w_z [rad/s]')
 ax2.plot(goal_angle[START_STEP:PlOT_STEPS], label='Angular difference to the goal [rad]')
 ax2.set_xlabel('Timesteps')
+ax2.axhline(0)
 ax2.legend()
 
 # Adding a title for the entire figure
