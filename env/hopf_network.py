@@ -113,7 +113,7 @@ class HopfNetwork():
                                     [1/2,-1/2,0,1],
                                     [-1/2,-3/2,-1,0]]) 
     
-    self.PHI_bound = np.pi*np.array([[0,0,-1,-1],
+    self.PHI_bound = 1*np.array([[0,0,-1,-1],
                                      [0,0,-1,-1],
                                      [1,1,0,0],
                                      [1,1,0,0]])

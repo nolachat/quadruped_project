@@ -226,13 +226,17 @@ class QuadrupedGymEnv(gym.Env):
       
     elif self._observation_space_mode == "LR_COURSE_OBS":
 
-      observation_high = (np.concatenate((np.array([20.0,3.0,1]*4),
-                                          self._robot_config.VELOCITY_LIMITS,
-                                          np.array([1.0]*4))) + OBSERVATION_EPS)
+      observation_high = (np.concatenate((np.array([20.0,20.0,2]*4),
+                                         self._robot_config.VELOCITY_LIMITS,
+                                         np.array([1.0]*4),
+                                         np.array([np.sqrt(2)*(6-0.5),np.pi]),
+                                         np.array([500]*4))) + OBSERVATION_EPS)
       
-      observation_low = (np.concatenate((np.array([-1.0,-3.0,-1]*4),
+      observation_low = (np.concatenate((np.array([-2.0,-20.0,-2]*4),
                                          -self._robot_config.VELOCITY_LIMITS,
-                                         np.array([-1.0]*4))) - OBSERVATION_EPS)
+                                         np.array([-1.0]*4),
+                                         np.array([0,0]),
+                                         np.zeros((4,)))) - OBSERVATION_EPS)
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -275,7 +279,9 @@ class QuadrupedGymEnv(gym.Env):
 
       self._observation = np.concatenate((p_flat,
                                           v_flat,
-                                          body_orientation ))
+                                          body_orientation,                                          
+                                          self.get_distance_and_angle_to_goal(),
+                                          contact_info[2]))
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -359,7 +365,7 @@ class QuadrupedGymEnv(gym.Env):
     height = 0.1 * abs(self.robot.GetBasePosition()[2] -  0.305)
     #height = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBasePosition()[2] - self._robot_config.INIT_POSITION[2])**2 )
 
-    swing = 0.2 * self.CalculateSwingReward()
+    swing = 0.3 * self.CalculateSwingReward()
 
     reward = 0.1 * vel_tracking_reward \
             + yaw_reward \
@@ -371,9 +377,8 @@ class QuadrupedGymEnv(gym.Env):
             - roll_penalty\
             + penalty
 
-    
-
     return max(reward,0) # keep rewards positive
+
 
   def _height_tracking_reward(self, des_z=None):
     """Learn height tracking """
@@ -384,6 +389,7 @@ class QuadrupedGymEnv(gym.Env):
 
     return max(z_tracking_reward,0) # keep rewards positive
   
+
   def _stride_reward(self):
     """Maximize stride"""
 
@@ -397,6 +403,7 @@ class QuadrupedGymEnv(gym.Env):
       displacement += np.abs(v[0]) * self._time_step
 
     return displacement
+
 
   def get_distance_and_angle_to_goal(self):
     """ Helper to return distance and angle to current goal location. """
@@ -419,15 +426,15 @@ class QuadrupedGymEnv(gym.Env):
 
     return dist_to_goal, angle
   
+
   def _reward_flag_run(self):
-    """ Learn to move towards goal location. """
     curr_dist_to_goal, angle = self.get_distance_and_angle_to_goal()
 
     # minimize distance to goal (we want to move towards the goal)
     dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
     # minimize yaw deviation to goal (necessary?)
-    yaw_reward = 0
-    # yaw_reward = -0.1 * np.abs(angle) 
+    # yaw_reward = 0
+    yaw_reward = -0.2 * np.abs(angle) 
 
     # minimize energy 
     energy_reward = 0 
@@ -440,35 +447,12 @@ class QuadrupedGymEnv(gym.Env):
     
     return max(reward,0) # keep rewards positive
     
+
   def _reward_lr_course(self, des_vel_x=0.5):
     """ Implement your reward function here. How will you improve upon the above? """
+    reward = self._reward_fwd_locomotion()
+    reward = reward + self._reward_flag_run()
 
-    forward_velocity = self.robot.GetBaseLinearVelocity()[0]
-    velocity_reward = np.exp(-1 / 0.25 * (forward_velocity - des_vel_x)**2)
-
-    J, pos = zip(*[self.robot.ComputeJacobianAndPosition(i) for i in range(4)])
-    p_flat = np.concatenate(pos)
-    sideSign = np.array([-1, 1, -1, 1])
-    foot_y = 0.0838  # this is the hip length
-    xs, zs = self._cpg.update()
-    leg_coordinates = []
-
-    for i in range(4):
-      leg_coordinates.append(xs[i])          # x-coordinate
-      leg_coordinates.append(sideSign[i] * foot_y)  # y-coordinate
-      leg_coordinates.append(zs[i])          # z-coordinate
-
-    leg_des = np.array(leg_coordinates)
-
-    # Penalize for inaccurate foot placements (example)
-    foot_placement_penalty = sum(leg_des-p_flat)
-
-    energy_reward = 0 
-    for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
-      energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
-
-    # Combine the rewards and penalties
-    reward = velocity_reward - 0.005 * foot_placement_penalty - 0.005 * energy_reward
     return max(reward,0)
 
   def _reward(self):
