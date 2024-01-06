@@ -107,7 +107,7 @@ obs = env.reset()
 
 # [TODO] initialize arrays to save data from simulation
 
-num_sim = 3 # number of times to run the simulations
+num_sim = 2 # number of times to run the simulations
 MAX_STEPS = 1000 # maximum number of steps to plot, plot is shorted to number of steps done by first sim
 
 t = range(MAX_STEPS)
@@ -118,7 +118,7 @@ phases = np.zeros((4,len(t)))
 amplitudes_derivative = np.zeros((4,len(t)))
 phases_derivative = np.zeros((4,len(t)))
 
-base_speed = np.zeros((len(t),))
+base_speed = np.empty((len(t),num_sim))
 
 base_pos = np.zeros((2,len(t),num_sim))
 
@@ -159,28 +159,27 @@ while sim < num_sim :
     # [TODO] save data from current robot states for plots
     # To get base position, for example: env.envs[0].env.robot.GetBasePosition()
 
-    # CPG states
-    amplitudes[:,i] = env.envs[0].env._cpg.get_r()
-    phases[:,i] = env.envs[0].env._cpg.get_theta()
-    amplitudes_derivative[:,i] = env.envs[0].env._cpg.get_dr()
-    phases_derivative[:,i] = env.envs[0].env._cpg.get_dtheta()
+    if sim == 0:
+        # CPG states
+        amplitudes[:,i] = env.envs[0].env._cpg.get_r()
+        phases[:,i] = env.envs[0].env._cpg.get_theta()
+        amplitudes_derivative[:,i] = env.envs[0].env._cpg.get_dr()
+        phases_derivative[:,i] = env.envs[0].env._cpg.get_dtheta()
 
-    base_speed[i] = np.linalg.norm(env.envs[0].env.robot.GetBaseLinearVelocity()[0:2])
+        _, p0 = env.envs[0].env.robot.ComputeJacobianAndPosition(0)
+        dy[0,i] =  p0[1]
+        _, p1 = env.envs[0].env.robot.ComputeJacobianAndPosition(1)
+        dy[1,i] =  p1[1]
 
-    _, p0 = env.envs[0].env.robot.ComputeJacobianAndPosition(0)
-    dy[0,i] =  p0[1]
-    _, p1 = env.envs[0].env.robot.ComputeJacobianAndPosition(1)
-    dy[1,i] =  p1[1]
+        w_z[i] = env.envs[0].env.robot.GetBaseAngularVelocity()[2]
 
-    w_z[i] = env.envs[0].env.robot.GetBaseAngularVelocity()[2]
-
-    d, angle = env.envs[0].env.get_distance_and_angle_to_goal()
-    goal_angle[i] = angle
+        d, goal_angle[i] = env.envs[0].env.get_distance_and_angle_to_goal()
 
     for tau,vel in zip(env.envs[0].env._dt_motor_torques,env.envs[0].env._dt_motor_velocities):
         energy[sim] += np.abs(np.dot(tau,vel)) * env.envs[0].env._time_step
 
     base_pos[:,i,sim] = env.envs[0].env.robot.GetBasePosition()[0:2]
+    base_speed[i,sim] = np.linalg.norm(env.envs[0].env.robot.GetBaseLinearVelocity()[0:2])
 
     i = i + 1 
 
@@ -208,12 +207,12 @@ plt.show()
 
 
 ## Plotting velocity states
-mean_speed = np.mean(base_speed[START_STEP:PlOT_STEPS])
-std = np.std(base_speed[START_STEP:PlOT_STEPS])
+mean_speed = [np.mean(base_speed[:,n]) for n in range(num_sim) ] 
+std = [np.std(base_speed[:,n]) for n in range(num_sim) ]
 
 fig, ax = plt.subplots()
 
-ax.plot(base_speed[START_STEP:PlOT_STEPS], label='Speed |v(x,y)|')
+ax.plot(base_speed[START_STEP:PlOT_STEPS,0], label='Speed |v(x,y)|')
 ax.set_title('Evolution of speed')
 ax.set_xlabel('Timesteps')
 ax.set_ylabel('Speed [m/s]')
@@ -221,7 +220,7 @@ ax.legend()
 ax.grid(True)
 
 # Add mean and std as text
-ax.text(0.05, 0.95, f'Mean: {mean_speed:.2f} m/s\nStd: {std:.2f} m/s', 
+ax.text(0.05, 0.95, f'Mean: {mean_speed[0]:.2f} m/s\nStd: {std[0]:.2f} m/s', 
         transform=ax.transAxes, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.8))
 
 plt.show()
@@ -260,7 +259,9 @@ for i in range(num_sim):
     for step in range(last_step[i]-1):
         total_distance[i] += np.linalg.norm(base_pos[:,step+1,i]-base_pos[:,step,i])
 
-    cot[i] = energy[i]/(m*g*mean_speed)
+    cot[i] = energy[i]/(m*g*mean_speed[i])
 
+print("==========CoT Calculations:============")
 print("total_distance", total_distance)
+print("total_energy", energy)
 print("cot",cot)
