@@ -62,7 +62,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'smoother_turns&mass_offset'
+log_dir = interm_dir + 'smoother_turns&tighter_vel_tracking'
 # log_dir = interm_dir + 'v=1'
 
 # initialize env configs (render at test time)
@@ -136,7 +136,7 @@ for i in range(NSTEPS):
     action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
     obs, rewards, dones, info = env.step(action)
     episode_reward += rewards
-    if dones:
+    if dones or i == NSTEPS-1:
         print('episode_reward', episode_reward)
         print('Final base position', info[0]['base_pos'])
         episode_reward = 0
@@ -146,8 +146,8 @@ for i in range(NSTEPS):
         if PlOT_STEPS == 1:
             PlOT_STEPS = i # to plot the first sim only
 
-    # [TODO] save data from current robot states for plots 
-    # To get base position, for example: env.envs[0].env.robot.GetBasePosition() 
+    # [TODO] save data from current robot states for plots
+    # To get base position, for example: env.envs[0].env.robot.GetBasePosition()
 
     # CPG states
     amplitudes[:,i] = env.envs[0].env._cpg.get_r()

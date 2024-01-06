@@ -154,6 +154,8 @@ class QuadrupedGymEnv(gym.Env):
       test_env: add random terrain 
       competition_env: course competition block format, fixed coefficient of friction 
     """
+    self.mass_offset = np.zeros((4,))
+
     self._robot_config = robot_config
     self._isRLGymInterface = isRLGymInterface
     self._time_step = time_step
@@ -360,7 +362,7 @@ class QuadrupedGymEnv(gym.Env):
     v = np.linalg.norm(self.robot.GetBaseLinearVelocity()[0:2])
 
     phi = np.clip(phi, a_min=-np.pi/3, a_max=np.pi/3) # do not completely turn, to avoid falling
-    vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (v - des_vel)**2 ) * (1-np.abs(phi)/np.pi)
+    vel_tracking_reward = 0.05 * np.exp( -15 *  (v - des_vel)**2 ) * (1-np.abs(phi)/np.pi)
 
     # minimize energy 
     energy_reward = 0 
@@ -647,7 +649,7 @@ class QuadrupedGymEnv(gym.Env):
         self._add_noise = False # double check
 
         # self.robust_setup()
-        self._add_base_mass_offset()
+        # self._add_base_mass_offset()
 
     else:
       self.robot.Reset(reload_urdf=False)
