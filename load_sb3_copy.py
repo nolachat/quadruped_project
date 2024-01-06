@@ -62,8 +62,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'smoother_turns&tighter_vel_tracking'
-# log_dir = interm_dir + 'v=1'
+log_dir = interm_dir + 'CPG_desireless_v2_Goal_4'
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
@@ -77,7 +76,7 @@ env_config = {"motor_control_mode":"CPG",
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "DEFAULT"}
 
-env_config['render'] = True
+env_config['render'] = False
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 # env_config['competition_env'] = True
@@ -105,17 +104,14 @@ elif LEARNING_ALG == "SAC":
 print("\nLoaded model", model_name, "\n")
 
 obs = env.reset()
-episode_reward = 0
 
-# [TODO] initialize arrays to save data from simulation 
+# [TODO] initialize arrays to save data from simulation
 
-duration = 1 # total number of simulations (has to be multiplied by quaddrup ep len multiplier...)
-TIME_STEP = 0.001
-NSTEPS = int(duration//TIME_STEP)
-t = range(NSTEPS)
+num_sim = 3 # number of times to run the simulations
+MAX_STEPS = 1000 # maximum number of steps to plot, plot is shorted to number of steps done by first sim
 
-PlOT_STEPS = 1
-START_STEP = 0
+t = range(MAX_STEPS)
+last_step = np.empty((num_sim,), dtype=int)
 
 amplitudes = np.zeros((4,len(t)))
 phases = np.zeros((4,len(t)))
@@ -124,27 +120,41 @@ phases_derivative = np.zeros((4,len(t)))
 
 base_speed = np.zeros((len(t),))
 
+base_pos = np.zeros((2,len(t),num_sim))
+
 dy = np.zeros((2,len(t)))
 
 w_z = np.zeros((len(t),))
 
 goal_angle = np.zeros((len(t),))
 
-mass_offset = []
+energy = np.empty((num_sim,))
 
-for i in range(NSTEPS):
+mass_offset = np.empty((num_sim,4))
+
+# For the simulation
+i = 0 # timesteps counter
+sim = 0 # sim counter
+episode_reward = 0
+
+while sim < num_sim :
+
     action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
     obs, rewards, dones, info = env.step(action)
     episode_reward += rewards
-    if dones or i == NSTEPS-1:
+
+    if dones:
+
         print('episode_reward', episode_reward)
         print('Final base position', info[0]['base_pos'])
-        episode_reward = 0
-        mass_offset = np.append(mass_offset, env.envs[0].env.mass_offset)
-        print("N iteration:", i)
 
-        if PlOT_STEPS == 1:
-            PlOT_STEPS = i # to plot the first sim only
+        episode_reward = 0
+        mass_offset[sim] = env.envs[0].env.mass_offset
+        last_step[sim] = i
+
+        sim = sim + 1
+        i = 0
+        continue
 
     # [TODO] save data from current robot states for plots
     # To get base position, for example: env.envs[0].env.robot.GetBasePosition()
@@ -157,7 +167,6 @@ for i in range(NSTEPS):
 
     base_speed[i] = np.linalg.norm(env.envs[0].env.robot.GetBaseLinearVelocity()[0:2])
 
-
     _, p0 = env.envs[0].env.robot.ComputeJacobianAndPosition(0)
     dy[0,i] =  p0[1]
     _, p1 = env.envs[0].env.robot.ComputeJacobianAndPosition(1)
@@ -168,10 +177,18 @@ for i in range(NSTEPS):
     d, angle = env.envs[0].env.get_distance_and_angle_to_goal()
     goal_angle[i] = angle
 
+    for tau,vel in zip(env.envs[0].env._dt_motor_torques,env.envs[0].env._dt_motor_velocities):
+        energy[sim] += np.abs(np.dot(tau,vel)) * env.envs[0].env._time_step
+
+    base_pos[:,i,sim] = env.envs[0].env.robot.GetBasePosition()[0:2]
+
+    i = i + 1 
 
 # [TODO] make plots:
 legID_Name = {0: "FR Leg", 1: "FL Leg", 2: "RR Leg", 3: "RL Leg"}
 
+START_STEP = 0
+PlOT_STEPS = last_step[0]
 
 # Create four subplots
 fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
@@ -230,4 +247,20 @@ fig.suptitle('Plots of dy[FR], dy[FL], w_z, and goal_angle')
 # Display the plot
 plt.show()
 
-print("mass offset: ===================== ", mass_offset)
+# COT computation:
+total_distance = np.zeros((num_sim,))
+cot = np.empty((num_sim,))
+
+g = 9.8 # in quadruped_gym_env.py
+m = sum(env.envs[0].env.robot._total_mass_urdf) # in quadruped.py
+
+for i in range(num_sim):
+
+    # distance computation
+    for step in range(last_step[i]-1):
+        total_distance[i] += np.linalg.norm(base_pos[:,step+1,i]-base_pos[:,step,i])
+
+    cot[i] = energy[i]/(m*g*mean_speed)
+
+print("total_distance", total_distance)
+print("cot",cot)
