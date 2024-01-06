@@ -235,6 +235,7 @@ class QuadrupedGymEnv(gym.Env):
 
                                           , np.array([np.sqrt(2)*(6-0.5), np.pi])
                                           , np.array([500]*4)
+                                          , np.array([1.5])
 
                                             )) + OBSERVATION_EPS)
       
@@ -248,6 +249,7 @@ class QuadrupedGymEnv(gym.Env):
                                          
                                          , np.array([0, -np.pi])
                                          , np.zeros((4,))
+                                         , np.zeros((1,))
 
                                          )) - OBSERVATION_EPS)
 
@@ -282,6 +284,7 @@ class QuadrupedGymEnv(gym.Env):
       # 50 is arbitrary
 
       contact_info = self.robot.GetContactInfo()
+      v = np.linalg.norm(self.robot.GetBaseLinearVelocity()[0:2])
 
       self._observation = np.concatenate((self.robot.GetMotorAngles(), 
                                           self.robot.GetMotorVelocities(),
@@ -294,6 +297,7 @@ class QuadrupedGymEnv(gym.Env):
 
                                           , self.get_distance_and_angle_to_goal()
                                           , contact_info[2]
+                                          , [v]
                                           ))
 
     else:
@@ -429,8 +433,9 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self):
     """ Implement your reward function here. How will you improve upon the above? """
 
-    reward = self._reward_speed_tracking(des_vel=0.5)
-    reward += self._reward_flag_run()
+    # reward = self._reward_speed_tracking(des_vel=0.5)
+    reward = self._reward_fwd_locomotion()
+    # reward += self._reward_flag_run()
 
     return reward
 
