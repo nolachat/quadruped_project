@@ -644,7 +644,7 @@ class QuadrupedGymEnv(gym.Env):
         self._add_noise = False # double check
 
         # self.robust_setup()
-        # self._add_base_mass_offset()
+        self._add_base_mass_offset()
 
     else:
       self.robot.Reset(reload_urdf=False)

@@ -76,7 +76,7 @@ env_config = {"motor_control_mode":"CPG",
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "DEFAULT"}
 
-env_config['render'] = True
+env_config['render'] = False
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 # env_config['competition_env'] = True
@@ -117,6 +117,8 @@ amplitudes = np.zeros((4,len(t)))
 phases = np.zeros((4,len(t)))
 amplitudes_derivative = np.zeros((4,len(t)))
 phases_derivative = np.zeros((4,len(t)))
+stance_indication = np.zeros((4,len(t)))
+
 
 base_speed = np.empty((len(t),num_sim))
 
@@ -175,6 +177,8 @@ while sim < num_sim :
 
         d, goal_angle[i] = env.envs[0].env.get_distance_and_angle_to_goal()
 
+        stance_indication[:,i] = env.envs[0].env.robot.GetContactInfo()[3]
+
     for tau,vel in zip(env.envs[0].env._dt_motor_torques,env.envs[0].env._dt_motor_velocities):
         energy[sim] += np.abs(np.dot(tau,vel)) * env.envs[0].env._time_step
 
@@ -200,6 +204,14 @@ for i in range(4):
     axes[i].plot(t[START_STEP:PlOT_STEPS], phases_derivative[i, START_STEP:PlOT_STEPS], label=f'Phase Derivative $\\dot{{\\theta}}$')
     axes[i].set_ylabel(f'{legID_Name[i]}')
 
+    for j in t[START_STEP:PlOT_STEPS-1]:
+        # leave contact
+        if stance_indication[i,j] and not stance_indication[i,j+1]:
+            axes[i].axvline(j, color='teal')
+        # enter contact
+        if not stance_indication[i,j] and stance_indication[i,j+1]:
+            axes[i].axvline(j, color='mediumpurple')
+
 axes[3].set_xlabel('Time')
 plt.legend()
 plt.suptitle(f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$)', fontsize=16)
@@ -208,9 +220,7 @@ plt.show()
 
 ## Plotting velocity state
 mean_speed = [np.mean(base_speed[0:last_step[n],n]) for n in range(num_sim) ]
-std = [0]
-if num_sim > 1:
-    std = [np.std(base_speed[0:last_step[n],n]) for n in range(num_sim) ]
+std = [np.std(base_speed[0:last_step[n],n]) for n in range(num_sim) ]
 
 fig, ax = plt.subplots()
 
@@ -272,3 +282,17 @@ print("cot",cot)
 if num_sim > 1:
     print("cot mean", np.mean(cot))
     print("cot std", np.std(cot))
+
+# Robustness plots
+fig = plt.figure()
+ax = fig.add_subplot(projection='3d')
+
+sc = ax.scatter(mass_offset[:,0], mass_offset[:,1], mass_offset[:,2], s=5*mass_offset[:,3], c=last_step, cmap="cool", marker="s")
+
+ax.set_title('Impact of the mass distribution on the episode length')
+ax.set_xlabel('X [m]')
+ax.set_ylabel('Y [m]')
+ax.set_zlabel('Z [m]')
+cbar = fig.colorbar(sc, label="episode length")
+
+plt.show()
