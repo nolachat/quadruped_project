@@ -59,7 +59,7 @@ LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
 # log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'Flag_1'
+log_dir = interm_dir + 'Enonce'
 # log_dir = interm_dir + 'v=1'
 
 # initialize env configs (render at test time)

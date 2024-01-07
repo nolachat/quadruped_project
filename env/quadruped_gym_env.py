@@ -226,17 +226,23 @@ class QuadrupedGymEnv(gym.Env):
       
     elif self._observation_space_mode == "LR_COURSE_OBS":
 
-      observation_high = (np.concatenate((np.array([20.0,20.0,2]*4),
+      observation_high = (np.concatenate((np.array([20,20,2]*4),
                                          self._robot_config.VELOCITY_LIMITS,
-                                         np.array([1.0]*4),
-                                         np.array([np.sqrt(2)*(6-0.5),np.pi]),
-                                         np.array([500]*4))) + OBSERVATION_EPS)
+                                         np.array([1]*4),
+                                         np.array([np.pi/2,np.pi/4,np.pi]),
+                                         np.array([10,10,10]),
+                                         np.array([10,10,10]),
+                                         np.array([20,20,2]),
+                                         np.array([4, 4]),np.array([500] * 4),np.array([1] * 4))) + OBSERVATION_EPS)
       
-      observation_low = (np.concatenate((np.array([-2.0,-20.0,-2]*4),
+      observation_low = (np.concatenate((np.array([-20,-20,-2]*4),
                                          -self._robot_config.VELOCITY_LIMITS,
-                                         np.array([-1.0]*4),
-                                         np.array([0,0]),
-                                         np.zeros((4,)))) - OBSERVATION_EPS)
+                                         np.array([-1]*4),
+                                         np.array([-np.pi/2,-np.pi/4,-np.pi]),
+                                         np.array([-10,-10,-10]),
+                                         np.array([-10,-10,-10]),
+                                         np.array([-20,-20,-2]),
+                                         np.zeros((10,)))) - OBSERVATION_EPS)
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -267,8 +273,6 @@ class QuadrupedGymEnv(gym.Env):
       # if using the CPG, you can include states with self._cpg.get_r(), for example
       # 50 is arbitrary
 
-      contact_info = self.robot.GetContactInfo()
-
       J, pos = zip(*[self.robot.ComputeJacobianAndPosition(i) for i in range(4)])
       v = [J[i] @ self.robot.GetMotorVelocities()[3*i:3*i+3] for i in range(4)]
 
@@ -276,12 +280,27 @@ class QuadrupedGymEnv(gym.Env):
       v_flat = np.concatenate(v)
 
       body_orientation = self.robot.GetBaseOrientation()
+      body_orientation_rpy = self.robot.GetBaseOrientationRollPitchYaw()
+
+      body_speed = self.robot.GetBaseLinearVelocity()
+      angular_speed = self.robot.GetBaseAngularVelocity()
+      body_position= self.robot.GetBasePosition()
+
+      contact_info1 = self.robot.GetContactInfo()[0]
+      contact_info2 = self.robot.GetContactInfo()[1]
+      contact_info3 = self.robot.GetContactInfo()[2]
+      contact_info4 = self.robot.GetContactInfo()[3]
+      contact_info = np.concatenate([np.array([contact_info1]),np.array([contact_info2]),contact_info3,contact_info4])
+      
 
       self._observation = np.concatenate((p_flat,
                                           v_flat,
                                           body_orientation,                                          
-                                          self.get_distance_and_angle_to_goal(),
-                                          contact_info[2]))
+                                          body_orientation_rpy,
+                                          body_speed,
+                                          angular_speed,
+                                          body_position,
+                                          contact_info))
 
     else:
       raise ValueError("observation space not defined or not intended")
@@ -338,44 +357,41 @@ class QuadrupedGymEnv(gym.Env):
       # Only calculate swing reward if the foot is not in contact
       if not self.is_foot_in_contact[i]:
           time_since_last_contact = self.get_sim_time() - self.last_contact_time[i]
-          swing_reward += max(0, time_since_last_contact - 0.5)
+          swing_reward += time_since_last_contact - 0.5
     return swing_reward
   
-  def _reward_fwd_locomotion(self, des_vel_x=1):
+  def _reward_fwd_locomotion(self, des_vel_x=1.5):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity 
-    self.UpdateContactTimes()
-    #vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
-    vel_tracking_reward = 1 - abs(self.robot.GetBaseLinearVelocity()[0] - des_vel_x)
-    # minimize yaw (go straight)
-    yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) 
-    roll_penalty = 0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[0]) 
-    # don't drift laterally 
-    drift_reward = -0.1 * abs(self.robot.GetBasePosition()[1]) 
+    #des_vel_x = np.random.uniform(0.7, 4.0)
+    #vel_tracking_reward = 0.03 * np.exp( -1/ 0.25 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
+    vel_tracking_reward = 0.1 * (1 - abs(self.robot.GetBaseLinearVelocity()[0] - des_vel_x))
 
-    penalty = 0
-    if self.is_fallen():
-      penalty = -10
+    self.UpdateContactTimes()
+    swing = 0.2 * self.CalculateSwingReward()
 
     # minimize energy 
     energy_reward = 0 
     for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
       energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
 
-    height = 0.1 * abs(self.robot.GetBasePosition()[2] -  0.305)
-    #height = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBasePosition()[2] - self._robot_config.INIT_POSITION[2])**2 )
+    orientation_penalty = 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
+    drift_reward = -0.1 * abs(self.robot.GetBasePosition()[1]) 
 
-    swing = 0.3 * self.CalculateSwingReward()
+    height = - 0.1 * abs(self.robot.GetBasePosition()[2] -  0.305)
 
-    reward = 0.1 * vel_tracking_reward \
-            + yaw_reward \
-            + drift_reward \
+    penalty = 0
+    if self.is_fallen():
+      penalty = -10
+
+    reward = vel_tracking_reward \
             + swing \
-            - 0.01 * energy_reward \
-            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))\
-            - height\
-            - roll_penalty\
+            - 0.008 * energy_reward \
+            + drift_reward \
+            - orientation_penalty \
+            + height \
             + penalty
+
 
     return max(reward,0) # keep rewards positive
 
@@ -433,8 +449,8 @@ class QuadrupedGymEnv(gym.Env):
     # minimize distance to goal (we want to move towards the goal)
     dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
     # minimize yaw deviation to goal (necessary?)
-    # yaw_reward = 0
-    yaw_reward = -0.2 * np.abs(angle) 
+    yaw_reward = 0
+    #yaw_reward = -0.2 * np.abs(angle) 
 
     # minimize energy 
     energy_reward = 0 
@@ -448,12 +464,27 @@ class QuadrupedGymEnv(gym.Env):
     return max(reward,0) # keep rewards positive
     
 
-  def _reward_lr_course(self, des_vel_x=0.5):
+  def _reward_lr_course(self, des_vel_x=1):
     """ Implement your reward function here. How will you improve upon the above? """
-    reward = self._reward_fwd_locomotion()
-    reward = reward + self._reward_flag_run()
+    """Learn forward locomotion at a desired velocity. """
+    # track the desired velocity 
+    vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
+    # minimize yaw (go straight)
+    yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) 
+    # don't drift laterally 
+    #drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1]) 
+    # minimize energy 
+    energy_reward = 0 
+    for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
+      energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
 
+    reward = vel_tracking_reward \
+            + yaw_reward \
+            - 0.01 * energy_reward \
+            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))\
+            + self._reward_flag_run()
     return max(reward,0)
+
 
   def _reward(self):
     """ Get reward depending on task"""
@@ -495,16 +526,16 @@ class QuadrupedGymEnv(gym.Env):
     """
 
     # clip RL actions to be between -1 and 1 (standard RL technique)
-    front_legs_action = (actions[0:3] + actions[3:6]) / 2
-    rear_legs_action = (actions[6:9] + actions[9:12]) / 2
+    #front_legs_action = (actions[0:3] + actions[3:6]) / 2
+    #rear_legs_action = (actions[6:9] + actions[9:12]) / 2
 
     # Apply synchronized actions to both legs in each pair
-    s_actions = np.concatenate([front_legs_action, front_legs_action, rear_legs_action, rear_legs_action])
+    #s_actions = np.concatenate([front_legs_action, front_legs_action, rear_legs_action, rear_legs_action])
 
-    u = np.clip(s_actions,-1,1)
+    u = np.clip(actions,-1,1)
     # scale to corresponding desired foot positions (i.e. ranges in x,y,z we allow the agent to choose foot positions)
     # [TODO: edit (do you think these should these be increased? How limiting is this?)]
-    scale_array = np.array([0.2, 0.05, 0.08]*4)
+    scale_array = np.array([0.2, 0.2, 0.08]*4)
     # add to nominal foot position in leg frame (what are the final ranges?)
     des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME + scale_array*u
 
