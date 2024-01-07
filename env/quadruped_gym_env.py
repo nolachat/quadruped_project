@@ -235,7 +235,6 @@ class QuadrupedGymEnv(gym.Env):
 
                                           , np.array([np.sqrt(2)*(6-0.5), np.pi])
                                           , np.array([500]*4)
-                                          , np.array([1.5])
 
                                             )) + OBSERVATION_EPS)
       
@@ -249,7 +248,6 @@ class QuadrupedGymEnv(gym.Env):
                                          
                                          , np.array([0, -np.pi])
                                          , np.zeros((4,))
-                                         , np.zeros((1,))
 
                                          )) - OBSERVATION_EPS)
 
@@ -284,7 +282,6 @@ class QuadrupedGymEnv(gym.Env):
       # 50 is arbitrary
 
       contact_info = self.robot.GetContactInfo()
-      v = np.linalg.norm(self.robot.GetBaseLinearVelocity()[0:2])
 
       self._observation = np.concatenate((self.robot.GetMotorAngles(), 
                                           self.robot.GetMotorVelocities(),
@@ -297,7 +294,6 @@ class QuadrupedGymEnv(gym.Env):
 
                                           , self.get_distance_and_angle_to_goal()
                                           , contact_info[2]
-                                          , [v]
                                           ))
 
     else:
@@ -367,6 +363,7 @@ class QuadrupedGymEnv(gym.Env):
 
     phi = np.clip(phi, a_min=-np.pi/3, a_max=np.pi/3) # do not completely turn, to avoid falling
     vel_tracking_reward = 0.05 * np.exp( -15 *  (v - des_vel)**2 ) * (1-np.abs(phi)/np.pi)
+    # vel_tracking_reward = 0.05 * np.exp( -4 *  (v - des_vel)**2 ) * (1-np.abs(phi)/np.pi)
 
     # minimize energy 
     energy_reward = 0 
@@ -381,7 +378,7 @@ class QuadrupedGymEnv(gym.Env):
     pitch_penalty = - 0.5 * angular_position[1]
 
     reward = vel_tracking_reward \
-            - 0.01 * energy_reward \
+            - 0.05 * energy_reward \
             - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1])) \
             + roll_penalty \
             + pitch_penalty
@@ -415,27 +412,20 @@ class QuadrupedGymEnv(gym.Env):
 
     # minimize distance to goal (we want to move towards the goal)
     dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
-    # minimize yaw deviation to goal (necessary?)
-    yaw_reward = 0
-    # yaw_reward = -0.1 * np.abs(angle) 
 
-    # minimize energy 
-    energy_reward = 0 
-    for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
-      energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
+    # penalise deviation above pi/3
+    yaw_reward = -0.1 * max(angle**2-np.pi/3, 0)
 
     reward = dist_reward \
-            + yaw_reward \
-            - 0.001 * energy_reward 
+            + yaw_reward
     
     return max(reward,0) # keep rewards positive
     
   def _reward_lr_course(self):
     """ Implement your reward function here. How will you improve upon the above? """
 
-    # reward = self._reward_speed_tracking(des_vel=0.5)
-    reward = self._reward_fwd_locomotion()
-    # reward += self._reward_flag_run()
+    reward = self._reward_speed_tracking(des_vel=0.5)
+    reward += self._reward_flag_run()
 
     return reward
 
