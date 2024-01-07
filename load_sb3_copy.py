@@ -76,7 +76,7 @@ env_config = {"motor_control_mode":"CPG",
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "DEFAULT"}
 
-env_config['render'] = False
+env_config['render'] = True
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 # env_config['competition_env'] = True
@@ -287,9 +287,9 @@ if num_sim > 1:
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
 
-sc = ax.scatter(mass_offset[:,0], mass_offset[:,1], mass_offset[:,2], s=5*mass_offset[:,3], c=last_step, cmap="cool", marker="s")
+sc = ax.scatter(mass_offset[:,0], mass_offset[:,1], mass_offset[:,2], s=5*mass_offset[:,3], c=last_step, cmap="tab20c_r", marker="s")
 
-ax.set_title('Impact of the mass distribution on the episode length')
+ax.set_title(f'Impact of the mass distribution on the episode length over {num_sim} iterations')
 ax.set_xlabel('X [m]')
 ax.set_ylabel('Y [m]')
 ax.set_zlabel('Z [m]')
