@@ -76,7 +76,7 @@ env_config = {"motor_control_mode":"CPG",
 #                "task_env": "LR_COURSE_TASK",
 #                "observation_space_mode": "DEFAULT"}
 
-env_config['render'] = False
+env_config['render'] = True
 env_config['record_video'] = False
 env_config['add_noise'] = False 
 # env_config['competition_env'] = True
@@ -107,7 +107,7 @@ obs = env.reset()
 
 # [TODO] initialize arrays to save data from simulation
 
-num_sim = 2 # number of times to run the simulations
+num_sim = 1 # number of times to run the sicmulations
 MAX_STEPS = 1000 # maximum number of steps to plot, plot is shorted to number of steps done by first sim
 
 t = range(MAX_STEPS)
@@ -128,7 +128,7 @@ w_z = np.zeros((len(t),))
 
 goal_angle = np.zeros((len(t),))
 
-energy = np.empty((num_sim,))
+energy = np.zeros((num_sim,))
 
 mass_offset = np.empty((num_sim,4))
 
@@ -206,9 +206,11 @@ plt.suptitle(f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$)', fontsiz
 plt.show()
 
 
-## Plotting velocity states
-mean_speed = [np.mean(base_speed[:,n]) for n in range(num_sim) ] 
-std = [np.std(base_speed[:,n]) for n in range(num_sim) ]
+## Plotting velocity state
+mean_speed = [np.mean(base_speed[0:last_step[n],n]) for n in range(num_sim) ]
+std = [0]
+if num_sim > 1:
+    std = [np.std(base_speed[0:last_step[n],n]) for n in range(num_sim) ]
 
 fig, ax = plt.subplots()
 
@@ -259,9 +261,14 @@ for i in range(num_sim):
     for step in range(last_step[i]-1):
         total_distance[i] += np.linalg.norm(base_pos[:,step+1,i]-base_pos[:,step,i])
 
-    cot[i] = energy[i]/(m*g*mean_speed[i])
+    if mean_speed[i] != 0:
+        cot[i] = energy[i]/(m*g*mean_speed[i])
 
 print("==========CoT Calculations:============")
 print("total_distance", total_distance)
 print("total_energy", energy)
 print("cot",cot)
+
+if num_sim > 1:
+    print("cot mean", np.mean(cot))
+    print("cot std", np.std(cot))
