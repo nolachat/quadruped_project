@@ -68,7 +68,7 @@ gait = "TROT"
 cpg = HopfNetwork(time_step=TIME_STEP, gait=gait)
 
 
-TEST_STEPS = int(2 / (TIME_STEP))
+TEST_STEPS = int(10 / (TIME_STEP))
 t = np.arange(TEST_STEPS)*TIME_STEP
 
 # [/TODO] initialize data structures to save CPG and robot states
@@ -84,13 +84,20 @@ current_positions = np.zeros((4, 3, TEST_STEPS))
 stored_desired_positions = np.zeros((3, TEST_STEPS))
 stored_current_positions = np.zeros((3, TEST_STEPS))
 
+forward_velocities = []
+
+# variable initialisation for CoT
+total_mechanical_work = 0.0
+total_work_cartesian_pd = 0.0
+total_work_joint_pd = 0.0
+body_weight = 5
 
 # Sample Gains
 # joint PD gains
-kp = np.array([10, 100, 100])
-kd = np.array([5, 5, 5])
+kp = np.array([20, 80, 90])
+kd = np.array([2, 4, 5])
 # Cartesian PD gains
-kpCartesian = np.diag([900]*3)  # 50
+kpCartesian = np.diag([1000]*3)  # 50
 kdCartesian = np.diag([20]*3)  # 20
 
 
@@ -114,6 +121,10 @@ for j in range(TEST_STEPS):
         # Add joint PD contribution to tau for leg i (Equation 4)
         tau = tau + kp * (leg_q-q[3*i:3*i+3]) + kd * \
             (-dq[3*i:3*i+3])  # [/TODO]
+
+        work_joint_pd = np.sum(tau * dq[3*i:3*i+3]) * TIME_STEP
+        total_work_joint_pd = total_work_joint_pd+work_joint_pd
+
         # add Cartesian PD contribution
         if ADD_CARTESIAN_PD:
             # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
@@ -121,21 +132,38 @@ for j in range(TEST_STEPS):
             # Get current foot velocity in leg frame (Equation 2)
             v = J @ dq[3*i:3*i+3]  # [TODO]
             # Calculate torque contribution from Cartesian PD (Equation 5) [Make sure you are using matrix multiplications]
-            tau = tau + J.T @ (np.matmul(kpCartesian, (leg_xyz-pos)) +
-                               np.matmul(kdCartesian, (-v)))  # [/TODO]
+            tau_cart = J.T @ (np.matmul(kpCartesian, (leg_xyz-pos)) +
+                              np.matmul(kdCartesian, (-v)))  # [/TODO]
+            tau = tau + tau_cart
 
+            # Compute power of Cartesian PD (force times velocity)
+            power_cartesian_pd = np.sum(tau_cart * v)
+
+            # Accumulate work over time
+            total_work_cartesian_pd = total_work_cartesian_pd+power_cartesian_pd * TIME_STEP
         action[3*i:3*i+3] = tau
+
+        # power_joint_pd = np.sum(tau * dq[3*i:3*i+3])
+
         if i == 0:
             # Assuming leg_q represents joint angles
             stored_desired_positions[:, j] = leg_q
             stored_current_positions[:, j] = q[3 * i:3 * i + 3]
-
-            print(leg_q)
-
         # store desired and current positions
         desired_positions[i, :, j] = leg_xyz
-        # print(desired_positions[i, :, j])
-        current_positions[i, :, j] = pos
+        # current_positions[i, :, j] = pos
+
+        # values for average velocity
+        velocity = env.robot.GetBaseLinearVelocity()
+        dx, dy, _ = velocity
+
+        # values for CoT
+
+    # Compute forward velocity
+    forward_vel = np.sqrt(dx**2 + dy**2)
+
+    # Store forward velocity in the list
+    forward_velocities.append(forward_vel)
 
     env.step(action)
 
@@ -150,6 +178,25 @@ for j in range(TEST_STEPS):
 #####################################################
 # PLOTS
 #####################################################
+average_forward_vel = np.mean(forward_velocities)
+print("Average Forward Velocity:", average_forward_vel)
+
+step_duration = (t[-1] - t[0]) / TEST_STEPS
+
+# Print the step duration
+print("Step Duration:", step_duration)
+distance_traveled = np.sum(forward_velocities) * TIME_STEP
+print("Distance_traveled", distance_traveled)
+# cot = total_work / (body_weight * total_distance)
+# Print the result
+total_mechanical_work = total_work_joint_pd  # + total_work_cartesian_pd
+print("Total Mechanical Work: {:.6f} J".format(total_mechanical_work))
+COT = total_mechanical_work / (body_weight*10 * distance_traveled)
+
+# Print the result
+print("Cost of Transport (COT):", COT)
+# Print the result
+# print("Cost of Transport (CoT):", cot)
 
 
 def legID_Name(legID):
@@ -157,7 +204,7 @@ def legID_Name(legID):
     return leg_names.get(legID, "Leg ID not matching")
 
 
-END_STEP = int(0.8 // (TIME_STEP))
+END_STEP = int(1 // (TIME_STEP))
 START_STEP = int(0 // (TIME_STEP))
 
 
@@ -167,23 +214,23 @@ leg_index = 0
 
 
 # Create three subplots for the three joints
-fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
+# fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
 
 # Plot actual and desired positions for each joint
-joint_labels = ['x', 'y', 'z']
+# joint_labels = ['x', 'y', 'z']
 
-for joint_index in range(3):
-    axes[joint_index].plot(t[START_STEP:END_STEP], desired_positions[leg_index, joint_index, START_STEP:END_STEP],
-                           label=f'Desired ', linestyle='--')
-    axes[joint_index].plot(t[START_STEP:END_STEP], current_positions[leg_index, joint_index, START_STEP:END_STEP],
-                           label=f'Actual', linestyle='-')
-    axes[joint_index].set_ylabel(f'{joint_labels[joint_index]} (m)')
+# for joint_index in range(3):
+#     axes[joint_index].plot(t[START_STEP:END_STEP], desired_positions[leg_index, joint_index, START_STEP:END_STEP],
+#                            label=f'Desired ', linestyle='--')
+#     axes[joint_index].plot(t[START_STEP:END_STEP], current_positions[leg_index, joint_index, START_STEP:END_STEP],
+#                            label=f'Actual', linestyle='-')
+#     axes[joint_index].set_ylabel(f'{joint_labels[joint_index]} (m)')
 
-axes[2].set_xlabel('Time')
-plt.legend()
-plt.suptitle(
-    f'Foot xyz positions for Front Right (FR) Leg', fontsize=16)
-plt.show()
+# axes[2].set_xlabel('Time')
+# plt.legend()
+# plt.suptitle(
+#     f'Foot xyz positions for Front Right (FR) Leg', fontsize=16)
+# plt.show()
 
 
 fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
@@ -203,25 +250,25 @@ plt.suptitle(
     f'Joint position for Front Right (FR) Leg', fontsize=16)
 plt.show()
 # Create four subplots
-# fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
 
 # Plot each vector in a separate subplot
-# for i in range(4):
-#     axes[i].plot(t[START_STEP:END_STEP], amplitudes[i,
-#                  START_STEP:END_STEP], label=f'Amplitude $r$')
-#     axes[i].plot(t[START_STEP:END_STEP],
-#                  phases[i, START_STEP:END_STEP], label=f'Phase $\\theta$ ')
-#     axes[i].plot(t[START_STEP:END_STEP], amplitudes_derivative[i,
-#                  START_STEP:END_STEP], label=f'Amplitude Derivative $\\dot{{r}}$')
-#     axes[i].plot(t[START_STEP:END_STEP], phases_derivative[i,
-#                  START_STEP:END_STEP], label=f'Phase Derivative $\\dot{{\\theta}}$')
-#     axes[i].set_ylabel(f'{legID_Name(i)}')
+for i in range(4):
+    axes[i].plot(t[START_STEP:END_STEP], amplitudes[i,
+                 START_STEP:END_STEP], label=f'Amplitude $r$')
+    axes[i].plot(t[START_STEP:END_STEP],
+                 phases[i, START_STEP:END_STEP], label=f'Phase $\\theta$ ')
+    axes[i].plot(t[START_STEP:END_STEP], amplitudes_derivative[i,
+                 START_STEP:END_STEP], label=f'Amplitude Derivative $\\dot{{r}}$')
+    axes[i].plot(t[START_STEP:END_STEP], phases_derivative[i,
+                 START_STEP:END_STEP], label=f'Phase Derivative $\\dot{{\\theta}}$')
+    axes[i].set_ylabel(f'{legID_Name(i)}')
 
-# axes[3].set_xlabel('Time')
-# plt.legend()
-# plt.suptitle(
-#     f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$) for a {gait} gait', fontsize=16)
-# plt.show()
+axes[3].set_xlabel('Time')
+plt.legend()
+plt.suptitle(
+    f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$) for a {gait} gait', fontsize=16)
+plt.show()
 
 """ 
 # Create subplots
