@@ -68,7 +68,7 @@ gait = "TROT"
 cpg = HopfNetwork(time_step=TIME_STEP, gait=gait)
 
 
-TEST_STEPS = int(2 / (TIME_STEP))
+TEST_STEPS = int(5 / (TIME_STEP))
 t = np.arange(TEST_STEPS)*TIME_STEP
 
 # [/TODO] initialize data structures to save CPG and robot states
@@ -97,10 +97,10 @@ motor_velocities = []
 
 # Sample Gains
 # joint PD gains
-kp = np.array([50, 150, 150])
+kp = np.array([50, 120, 120])
 kd = np.array([2, 4, 5])
 # Cartesian PD gains
-kpCartesian = np.diag([1200]*3)  # 50
+kpCartesian = np.diag([1100]*3)  # 50
 kdCartesian = np.diag([20]*3)  # 20
 
 
