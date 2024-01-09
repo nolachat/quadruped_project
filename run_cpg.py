@@ -97,10 +97,10 @@ motor_velocities = []
 
 # Sample Gains
 # joint PD gains
-kp = np.array([20, 80, 90])
+kp = np.array([50, 150, 150])
 kd = np.array([2, 4, 5])
 # Cartesian PD gains
-kpCartesian = np.diag([900]*3)  # 50
+kpCartesian = np.diag([1200]*3)  # 50
 kdCartesian = np.diag([20]*3)  # 20
 
 
@@ -228,9 +228,9 @@ for tau, vel in zip(motor_torques, motor_velocities):
 COT = energy_reward/(body_weight*9.81*average_forward_vel)
 print('COT power tot =', COT)
 
-step_duration = (t[-1] - t[0]) / TEST_STEPS
-# Print the step duration
-print("Step Duration:", step_duration)
+# step_duration = (t[-1] - t[0]) / TEST_STEPS
+# # Print the step duration
+# print("Step Duration:", step_duration)
 
 
 distance_traveled = np.sum(forward_velocities) * TIME_STEP
@@ -312,8 +312,12 @@ for i in range(4):
                  START_STEP:END_STEP], label=f'Phase Derivative $\\dot{{\\theta}}$')
     axes[i].set_ylabel(f'{legID_Name(i)}')
     # Set ticks every 0.05 seconds
-    plt.axhline(y=np.pi, color='r', linestyle='--', label=r'$\pi$')
-    axes[i].set_xticks(np.arange(0, 1.01, 0.05))
+    if i == 3:
+        plt.axhline(y=np.pi, color='r', linestyle='--', label=r'$\pi$')
+    axes[i].set_xticks(np.arange(0, 0.45, 0.05))
+    # Add minor ticks every 0.001 seconds
+    axes[i].xaxis.set_minor_locator(plt.MultipleLocator(0.001))
+    axes[i].minorticks_on()
 
 
 axes[3].set_xlabel('Time(s)')
