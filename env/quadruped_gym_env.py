@@ -226,7 +226,9 @@ class QuadrupedGymEnv(gym.Env):
       
     elif self._observation_space_mode == "LR_COURSE_OBS":
 
-      observation_high = (np.concatenate((np.array([20,20,2]*4),
+      observation_high = (np.concatenate((self._robot_config.UPPER_ANGLE_JOINT,
+                                         self._robot_config.VELOCITY_LIMITS,
+                                         np.array([20,20,2]*4),
                                          self._robot_config.VELOCITY_LIMITS,
                                          np.array([1]*4),
                                          np.array([np.pi/2,np.pi/4,np.pi]),
@@ -235,7 +237,9 @@ class QuadrupedGymEnv(gym.Env):
                                          np.array([20,20,2]),
                                          np.array([4, 4]),np.array([500] * 4),np.array([1] * 4))) + OBSERVATION_EPS)
       
-      observation_low = (np.concatenate((np.array([-20,-20,-2]*4),
+      observation_low = (np.concatenate((self._robot_config.LOWER_ANGLE_JOINT,
+                                         -self._robot_config.VELOCITY_LIMITS,
+                                         np.array([-20,-20,-2]*4),
                                          -self._robot_config.VELOCITY_LIMITS,
                                          np.array([-1]*4),
                                          np.array([-np.pi/2,-np.pi/4,-np.pi]),
@@ -293,7 +297,9 @@ class QuadrupedGymEnv(gym.Env):
       contact_info = np.concatenate([np.array([contact_info1]),np.array([contact_info2]),contact_info3,contact_info4])
       
 
-      self._observation = np.concatenate((p_flat,
+      self._observation = np.concatenate((self.robot.GetMotorAngles(), 
+                                          self.robot.GetMotorVelocities(),
+                                          p_flat,
                                           v_flat,
                                           body_orientation,                                          
                                           body_orientation_rpy,
@@ -360,7 +366,7 @@ class QuadrupedGymEnv(gym.Env):
           swing_reward += time_since_last_contact - 0.5
     return swing_reward
   
-  def _reward_fwd_locomotion(self, des_vel_x=1.5):
+  def _reward_fwd_locomotion(self, des_vel_x=1):
     """Learn forward locomotion at a desired velocity. """
     # track the desired velocity 
     #des_vel_x = np.random.uniform(0.7, 4.0)
@@ -376,8 +382,19 @@ class QuadrupedGymEnv(gym.Env):
       energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
 
     orientation_penalty = 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))
+    #orientation_penalty = - 0.5 *(self.robot.GetBaseOrientationRollPitchYaw()[0]+self.robot.GetBaseOrientationRollPitchYaw()[1])
     drift_reward = -0.1 * abs(self.robot.GetBasePosition()[1]) 
-
+    #drift_reward = 0
+    #curr_dist_to_goal, angle = self.get_distance_and_angle_to_goal()
+    #0.05 abs please
+    # 0.2 abs high
+    # 0.5 cos well
+    #yaw_reward = 0.2 * np.cos(angle) - 0.2 * np.abs(np.sin(angle))
+    #yaw_reward = -0.1 * np.abs(angle) 
+    #print(yaw_reward)
+    #dist_reward = -0.05 * curr_dist_to_goal
+    #dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
+    #print(dist_reward)
     height = - 0.1 * abs(self.robot.GetBasePosition()[2] -  0.305)
 
     penalty = 0
@@ -387,12 +404,13 @@ class QuadrupedGymEnv(gym.Env):
     reward = vel_tracking_reward \
             + swing \
             - 0.008 * energy_reward \
-            + drift_reward \
-            - orientation_penalty \
+            - orientation_penalty\
+            + drift_reward\
             + height \
-            + penalty
+            + penalty 
 
 
+    #print(reward)
     return max(reward,0) # keep rewards positive
 
 
@@ -449,8 +467,10 @@ class QuadrupedGymEnv(gym.Env):
     # minimize distance to goal (we want to move towards the goal)
     dist_reward = 10 * ( self._prev_pos_to_goal - curr_dist_to_goal)
     # minimize yaw deviation to goal (necessary?)
-    yaw_reward = 0
-    #yaw_reward = -0.2 * np.abs(angle) 
+    #yaw_reward = 0
+    yaw_reward = - 0.1* np.abs(angle) 
+    #yaw_reward = -0.1 * max(angle**2-np.pi/3, 0)
+    #yaw_reward = 0.1 * np.cos(angle) 
 
     # minimize energy 
     energy_reward = 0 
@@ -459,7 +479,7 @@ class QuadrupedGymEnv(gym.Env):
 
     reward = dist_reward \
             + yaw_reward \
-            - 0.001 * energy_reward 
+            -0.001 * energy_reward
     
     return max(reward,0) # keep rewards positive
     
@@ -467,22 +487,7 @@ class QuadrupedGymEnv(gym.Env):
   def _reward_lr_course(self, des_vel_x=1):
     """ Implement your reward function here. How will you improve upon the above? """
     """Learn forward locomotion at a desired velocity. """
-    # track the desired velocity 
-    vel_tracking_reward = 0.05 * np.exp( -1/ 0.25 *  (self.robot.GetBaseLinearVelocity()[0] - des_vel_x)**2 )
-    # minimize yaw (go straight)
-    yaw_reward = -0.2 * np.abs(self.robot.GetBaseOrientationRollPitchYaw()[2]) 
-    # don't drift laterally 
-    #drift_reward = -0.01 * abs(self.robot.GetBasePosition()[1]) 
-    # minimize energy 
-    energy_reward = 0 
-    for tau,vel in zip(self._dt_motor_torques,self._dt_motor_velocities):
-      energy_reward += np.abs(np.dot(tau,vel)) * self._time_step
-
-    reward = vel_tracking_reward \
-            + yaw_reward \
-            - 0.01 * energy_reward \
-            - 0.1 * np.linalg.norm(self.robot.GetBaseOrientation() - np.array([0,0,0,1]))\
-            + self._reward_flag_run()
+    reward = self._reward_fwd_locomotion()
     return max(reward,0)
 
 
@@ -535,7 +540,7 @@ class QuadrupedGymEnv(gym.Env):
     u = np.clip(actions,-1,1)
     # scale to corresponding desired foot positions (i.e. ranges in x,y,z we allow the agent to choose foot positions)
     # [TODO: edit (do you think these should these be increased? How limiting is this?)]
-    scale_array = np.array([0.2, 0.2, 0.08]*4)
+    scale_array = np.array([0.2, 0.05, 0.08]*4)
     # add to nominal foot position in leg frame (what are the final ranges?)
     des_foot_pos = self._robot_config.NOMINAL_FOOT_POS_LEG_FRAME + scale_array*u
 

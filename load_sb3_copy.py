@@ -58,14 +58,19 @@ from utils.file_utils import get_latest_model, load_all_results
 LEARNING_ALG = "PPO"
 interm_dir = "./logs/intermediate_models/"
 # path to saved models, i.e. interm_dir + '121321105810'
-# log_dir = interm_dir + '121523095438'
-log_dir = interm_dir + 'Enonce'
-# log_dir = interm_dir + 'v=1'
+#
+#log_dir = interm_dir + 'Perfect_FWD_1'
+#log_dir = interm_dir + 'rapport_speedfixed_1'
+#log_dir = interm_dir + 'rapport_speedfixedFlag_1'
+#log_dir = interm_dir + 'rapport_speed07_2'
+log_dir = interm_dir + 'rapport_speed07_flag_abs_1'
+
+
 
 # initialize env configs (render at test time)
 # check ideal conditions, as well as robustness to UNSEEN noise during training
 
-env_config = {"motor_control_mode":"CARTESIAN_PD",
+env_config = {"motor_control_mode":"CARTESIAN_PD",#
                "task_env": "LR_COURSE_TASK",
                "observation_space_mode": "LR_COURSE_OBS"}
 
