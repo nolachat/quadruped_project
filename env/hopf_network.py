@@ -50,18 +50,18 @@ class HopfNetwork():
 
     def __init__(self,
                  # intrinsic amplitude, converges to sqrt(mu)
-                 mu=1.6**2,
+                 mu=0.1**2,
                  # frequency in swing phase (can edit) base:5
-                 omega_swing=13*2*np.pi,  # new 2
+                 omega_swing=3*2*np.pi,  # new 2
                  # frequency in stance phase (can edit)
-                 omega_stance=5*2*np.pi,  # base:2          new 4
+                 omega_stance=2*2*np.pi,  # base:2          new 4
                  # Gait, can be TROT, WALK, PACE, BOUND, etc.
                  gait="TROT",
                  alpha=50,                # amplitude convergence factor
                  coupling_strength=1,     # coefficient to multiply coupling matrix
                  couple=True,             # whether oscillators should be coupled
                  time_step=0.001,         # time step
-                 ground_clearance=0.07,   # foot swing height
+                 ground_clearance=0.02,   # foot swing height
                  ground_penetration=0.01,  # foot stance penetration into ground
                  robot_height=0.3,        # in nominal case (standing)
                  des_step_len=0.05,       # desired step length
@@ -115,16 +115,6 @@ class HopfNetwork():
                                         [1, 0, 1/2, 3/2],
                                         [1/2, -1/2, 0, 1],
                                         [-1/2, -3/2, -1, 0]])
-
-        # self.PHI_trot = np.array([[0, 0.5, 0.5, 0],
-        #                           [0.5, 0, 0, 0.5],
-        #                           [0.5, 0, 0, 0.5],
-        #                           [0, 0.5, 0.5, 0]])*2*np.pi
-
-        # self.PHI_walk = np.array([[0, 0.5, 0.25, -0.25],
-        #                           [-0.5, 0, -0.25, 0.25],
-        #                           [-0.25, 0.25, 0, -0.5],
-        #                           [0.25, -0.25, 0.5, 0]])*2*np.pi
 
         self.PHI_bound = np.pi*np.array([[0, 0, -1, -1],
                                          [0, 0, -1, -1],
