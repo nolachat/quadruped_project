@@ -64,7 +64,7 @@ env = QuadrupedGymEnv(render=True,              # visualize
 
 # initialize Hopf Network, supply gait
 # cpg = HopfNetwork(time_step=TIME_STEP)
-gait = "WALK"
+gait = "PACE"
 cpg = HopfNetwork(time_step=TIME_STEP, gait=gait)
 
 
