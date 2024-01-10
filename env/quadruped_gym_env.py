@@ -643,7 +643,7 @@ class QuadrupedGymEnv(gym.Env):
         self._pybullet_client.changeDynamics(self.plane, -1, lateralFriction=ground_mu_k)
         self._add_noise = False # double check
 
-        self.robust_setup()
+        # self.robust_setup()
         self._add_base_mass_offset()
 
     else:

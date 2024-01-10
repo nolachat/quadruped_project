@@ -77,7 +77,7 @@ env_config = {"motor_control_mode":"CPG",
 #                "observation_space_mode": "DEFAULT"}
 
 env_config['render'] = True
-env_config['record_video'] = False
+env_config['record_video'] = True
 env_config['add_noise'] = False 
 # env_config['competition_env'] = True
 
@@ -272,7 +272,7 @@ for i in range(num_sim):
         total_distance[i] += np.linalg.norm(base_pos[:,step+1,i]-base_pos[:,step,i])
 
     if mean_speed[i] != 0:
-        cot[i] = energy[i]/(m*g*mean_speed[i])
+        cot[i] = energy[i]/((m+mass_offset[i,3])*g*mean_speed[i])
 
 print("==========CoT Calculations:============")
 print("total_distance", total_distance)
