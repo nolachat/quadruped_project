@@ -50,18 +50,18 @@ class HopfNetwork():
 
     def __init__(self,
                  # intrinsic amplitude, converges to sqrt(mu)
-                 mu=1.6**2,
+                 mu=1.4**2,
                  # frequency in swing phase (can edit) base:5
-                 omega_swing=10*2*np.pi,  # new 2
+                 omega_swing=13*2*np.pi,  # new 2
                  # frequency in stance phase (can edit)
-                 omega_stance=6*2*np.pi,  # base:2          new 4
+                 omega_stance=4*2*np.pi,  # base:2          new 4
                  # Gait, can be TROT, WALK, PACE, BOUND, etc.
-                 gait="PACE",
+                 gait="BOUND",
                  alpha=50,                # amplitude convergence factor
                  coupling_strength=1,     # coefficient to multiply coupling matrix
                  couple=True,             # whether oscillators should be coupled
                  time_step=0.001,         # time step
-                 ground_clearance=0.07,   # foot swing height
+                 ground_clearance=0.25,   # foot swing height
                  ground_penetration=0.01,  # foot stance penetration into ground
                  robot_height=0.3,        # in nominal case (standing)
                  des_step_len=0.05,       # desired step length
