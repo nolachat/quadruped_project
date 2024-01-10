@@ -52,7 +52,7 @@ class HopfNetwork():
                  # intrinsic amplitude, converges to sqrt(mu)
                  mu=1.6**2,
                  # frequency in swing phase (can edit) base:5
-                 omega_swing=13*2*np.pi,  # new 2
+                 omega_swing=12*2*np.pi,  # new 2
                  # frequency in stance phase (can edit)
                  omega_stance=5*2*np.pi,  # base:2          new 4
                  # Gait, can be TROT, WALK, PACE, BOUND, etc.
@@ -115,16 +115,6 @@ class HopfNetwork():
                                         [1, 0, 1/2, 3/2],
                                         [1/2, -1/2, 0, 1],
                                         [-1/2, -3/2, -1, 0]])
-
-        # self.PHI_trot = np.array([[0, 0.5, 0.5, 0],
-        #                           [0.5, 0, 0, 0.5],
-        #                           [0.5, 0, 0, 0.5],
-        #                           [0, 0.5, 0.5, 0]])*2*np.pi
-
-        # self.PHI_walk = np.array([[0, 0.5, 0.25, -0.25],
-        #                           [-0.5, 0, -0.25, 0.25],
-        #                           [-0.25, 0.25, 0, -0.5],
-        #                           [0.25, -0.25, 0.5, 0]])*2*np.pi
 
         self.PHI_bound = np.pi*np.array([[0, 0, -1, -1],
                                          [0, 0, -1, -1],

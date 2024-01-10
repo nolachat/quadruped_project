@@ -68,7 +68,7 @@ gait = "TROT"
 cpg = HopfNetwork(time_step=TIME_STEP, gait=gait)
 
 
-TEST_STEPS = int(5 / (TIME_STEP))
+TEST_STEPS = int(2 / (TIME_STEP))
 t = np.arange(TEST_STEPS)*TIME_STEP
 
 # [/TODO] initialize data structures to save CPG and robot states
@@ -87,18 +87,15 @@ stored_current_positions = np.zeros((3, TEST_STEPS))
 forward_velocities = []
 
 # variable initialisation for CoT
-total_mechanical_work = 0.0
-total_work_cartesian_pd = 0.0
-total_work_joint_pd = 0.0
+energy_reward = 0
 body_weight = 5
-
 motor_torques = []
 motor_velocities = []
 
 # Sample Gains
 # joint PD gains
-kp = np.array([50, 120, 120])
-kd = np.array([2, 4, 5])
+kp = np.array([50, 70, 90])
+kd = np.array([2, 5, 6])
 # Cartesian PD gains
 kpCartesian = np.diag([1100]*3)  # 50
 kdCartesian = np.diag([20]*3)  # 20
@@ -125,9 +122,6 @@ for j in range(TEST_STEPS):
         tau = tau + kp * (leg_q-q[3*i:3*i+3]) + kd * \
             (-dq[3*i:3*i+3])  # [/TODO]
 
-        work_joint_pd = np.sum(tau * dq[3*i:3*i+3]) * TIME_STEP
-        total_work_joint_pd = total_work_joint_pd+work_joint_pd
-
         # add Cartesian PD contribution
         if ADD_CARTESIAN_PD:
             # Get current Jacobian and foot position in leg frame (see ComputeJacobianAndPosition() in quadruped.py)
@@ -139,15 +133,7 @@ for j in range(TEST_STEPS):
                               np.matmul(kdCartesian, (-v)))  # [/TODO]
             tau = tau + tau_cart
 
-            # Compute power of Cartesian PD (force times velocity)
-            power_cartesian_pd = np.sum(tau_cart * v)
-
-            # Accumulate work over time
-            total_work_cartesian_pd = total_work_cartesian_pd+power_cartesian_pd * TIME_STEP
-
         action[3*i:3*i+3] = tau
-
-        # power_joint_pd = np.sum(tau * dq[3*i:3*i+3])
 
         if i == 0:
             # Assuming leg_q represents joint angles
@@ -163,7 +149,6 @@ for j in range(TEST_STEPS):
     motor_velocities.append(env.robot.GetMotorVelocities())
 
     # Compute forward velocity
-    # values for average velocity
     velocity = env.robot.GetBaseLinearVelocity()
     dx, dy, _ = velocity
     forward_vel = np.sqrt(dx**2 + dy**2)
@@ -181,70 +166,21 @@ for j in range(TEST_STEPS):
     phases_derivative[:, j] = cpg.get_dtheta()
 
 
-theta_1 = phases[1, :]
-
-# Find the indices where theta_1 crosses 0 and pi
-zero_crossings = np.where(np.diff(np.sign(theta_1)))[0]
-print('zero_crossings=', zero_crossings)
-pi_crossings = np.where(np.diff(np.sign(theta_1 - np.pi)))[0]
-
-# Initialize counters for stance and swing steps
-stance_steps = 0
-swing_steps = 0
-
-# Iterate over zero crossings to compute stance and swing steps
-for i in range(0, len(zero_crossings) - 1, 2):
-    start_index = zero_crossings[i]
-    end_index = zero_crossings[i + 1]
-
-    # Check if there is a pi crossing within the same step
-    pi_crossings_within_step = pi_crossings[
-        (pi_crossings >= start_index) & (pi_crossings <= end_index)
-    ]
-
-    if len(pi_crossings_within_step) > 0:
-        # Adjust start_index to the first pi crossing within the step
-        start_index = pi_crossings_within_step[0]
-
-    # Check if the step is in stance or swing
-    if start_index < end_index:
-        stance_steps += 1
-    else:
-        swing_steps += 1
-
-# Example print statements
-print("Number of Stance Steps:", stance_steps*TIME_STEP)
-print("Number of Swing Steps:", swing_steps*TIME_STEP)
 #####################################################
 # PLOTS
 #####################################################
 average_forward_vel = np.mean(forward_velocities)
 print("Average Forward Velocity:", average_forward_vel)
 
-energy_reward = 0
+
 for tau, vel in zip(motor_torques, motor_velocities):
     energy_reward = energy_reward + np.abs(np.dot(tau, vel)) * TIME_STEP
 
 COT = energy_reward/(body_weight*9.81*average_forward_vel)
 print('COT power tot =', COT)
 
-# step_duration = (t[-1] - t[0]) / TEST_STEPS
-# # Print the step duration
-# print("Step Duration:", step_duration)
-
-
 distance_traveled = np.sum(forward_velocities) * TIME_STEP
 print("Distance_traveled", distance_traveled)
-# cot = total_work / (body_weight * total_distance)
-# Print the result
-total_mechanical_work = total_work_joint_pd + total_work_cartesian_pd
-print("Total Mechanical Work: {:.6f} J".format(total_mechanical_work))
-COT = total_mechanical_work / (body_weight*10 * distance_traveled)
-
-# Print the result
-print("Cost of Transport (COT):", COT)
-# Print the result
-# print("Cost of Transport (CoT):", cot)
 
 
 def legID_Name(legID):
@@ -261,7 +197,7 @@ START_STEP = int(0 // (TIME_STEP))
 leg_index = 0
 
 
-fig, axes = plt.subplots(2, 1, figsize=(10, 5), sharex=True)
+fig, axes = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
 
 # Plot actual and desired positions for each joint
 joint_labels = ['x', 'y', 'z']
@@ -281,7 +217,7 @@ plt.legend()
 plt.suptitle(f'Foot positions for Front Right (FR) Leg', fontsize=16)
 plt.show()
 
-fig, axes = plt.subplots(2, 1, figsize=(8, 8), sharex=True)
+fig, axes = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
 
 joint_labels = [f'q{i}' for i in range(3)]
 
@@ -311,11 +247,9 @@ for i in range(4):
     axes[i].plot(t[START_STEP:END_STEP], phases_derivative[i,
                  START_STEP:END_STEP], label=f'Phase Derivative $\\dot{{\\theta}}$')
     axes[i].set_ylabel(f'{legID_Name(i)}')
-    # Set ticks every 0.05 seconds
     if i == 3:
         plt.axhline(y=np.pi, color='r', linestyle='--', label=r'$\pi$')
     axes[i].set_xticks(np.arange(0, 0.45, 0.05))
-    # Add minor ticks every 0.001 seconds
     axes[i].xaxis.set_minor_locator(plt.MultipleLocator(0.001))
     axes[i].minorticks_on()
 
