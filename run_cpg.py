@@ -43,7 +43,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 
 from env.hopf_network import HopfNetwork
-from env.quadruped_gym_env import QuadrupedGymEnv
+from env.quadruped_gym_env_CPG_RL import QuadrupedGymEnv
 
 
 ADD_CARTESIAN_PD = True

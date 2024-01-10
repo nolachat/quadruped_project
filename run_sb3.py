@@ -42,7 +42,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from utils.utils import CheckpointCallback
 from utils.file_utils import get_latest_model
 # gym environment
-from env.quadruped_gym_env import QuadrupedGymEnv
+from env.quadruped_gym_env_CPG_RL import QuadrupedGymEnv
 
 
 LEARNING_ALG = "PPO" # or "SAC"
