@@ -52,7 +52,7 @@ from stable_baselines3 import PPO, SAC
 # from stable_baselines3.common.cmd_util import make_vec_env
 from stable_baselines3.common.env_util import make_vec_env # fix for newer versions of stable-baselines3
 
-from env.quadruped_gym_env import QuadrupedGymEnv
+from env.quadruped_gym_env_CPG_RL import QuadrupedGymEnv
 # utils
 from utils.utils import plot_results
 from utils.file_utils import get_latest_model, load_all_results
@@ -70,11 +70,6 @@ log_dir = interm_dir + 'CPG_RL'
 env_config = {"motor_control_mode":"CPG",
                "task_env": "LR_COURSE_TASK",
                "observation_space_mode": "LR_COURSE_OBS"}
-
-
-# env_config = {"motor_control_mode":"PD",
-#                "task_env": "LR_COURSE_TASK",
-#                "observation_space_mode": "DEFAULT"}
 
 env_config['render'] = True
 env_config['record_video'] = True
