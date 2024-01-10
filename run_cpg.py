@@ -64,7 +64,7 @@ env = QuadrupedGymEnv(render=True,              # visualize
 
 # initialize Hopf Network, supply gait
 # cpg = HopfNetwork(time_step=TIME_STEP)
-gait = "TROT"
+gait = "WALK"
 cpg = HopfNetwork(time_step=TIME_STEP, gait=gait)
 
 
@@ -97,11 +97,11 @@ motor_velocities = []
 
 # Sample Gains
 # joint PD gains
-kp = np.array([50, 120, 120])
+kp = np.array([20, 120, 120])
 kd = np.array([2, 4, 5])
 # Cartesian PD gains
-kpCartesian = np.diag([1100]*3)  # 50
-kdCartesian = np.diag([20]*3)  # 20
+kpCartesian = np.diag([900]*3)  # 50
+kdCartesian = np.diag([30]*3)  # 20
 
 
 for j in range(TEST_STEPS):
@@ -312,8 +312,8 @@ for i in range(4):
                  START_STEP:END_STEP], label=f'Phase Derivative $\\dot{{\\theta}}$')
     axes[i].set_ylabel(f'{legID_Name(i)}')
     # Set ticks every 0.05 seconds
-    if i == 3:
-        plt.axhline(y=np.pi, color='r', linestyle='--', label=r'$\pi$')
+    # if i == 3:
+    #     plt.axhline(y=np.pi, color='r', linestyle='--', label=r'$\pi$')
     axes[i].set_xticks(np.arange(0, 0.45, 0.05))
     # Add minor ticks every 0.001 seconds
     axes[i].xaxis.set_minor_locator(plt.MultipleLocator(0.001))
