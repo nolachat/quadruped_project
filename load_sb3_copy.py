@@ -63,7 +63,7 @@ interm_dir = "./logs/intermediate_models/"
 #log_dir = interm_dir + 'rapport_speedfixed_1'
 #log_dir = interm_dir + 'rapport_speedfixedFlag_1'
 #log_dir = interm_dir + 'rapport_speed07_2'
-log_dir = interm_dir + 'rapport_speed07_flag_abs_1'
+log_dir = interm_dir + 'flagrun_dp_space'
 
 
 
@@ -114,53 +114,156 @@ episode_reward = 0
 duration = 2 #[s]
 TIME_STEP = 0.001
 NSTEPS = int(duration//TIME_STEP)
+NSIMS = 1
 t = range(NSTEPS)
 
-amplitudes = np.zeros((4,len(t)))
-phases = np.zeros((4,len(t)))
-amplitudes_derivative = np.zeros((4,len(t)))
-phases_derivative = np.zeros((4,len(t)))
+base_pos = np.zeros((2,len(t)))
 
-for i in range(NSTEPS):
-    action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
-    obs, rewards, dones, info = env.step(action)
-    episode_reward += rewards
-    if dones:
-        print('episode_reward', episode_reward)
-        print('Final base position', info[0]['base_pos'])
-        episode_reward = 0
+speed = np.zeros((len(t)))
+a_speed = np.zeros((len(t)))
+distance = np.zeros((len(t)))
+angle = np.zeros((len(t)))
+
+FR = np.zeros((len(t),3))
+FL = np.zeros((len(t),3))
+RR = np.zeros((len(t),3))
+RL = np.zeros((len(t),3))
+
+energy = np.zeros((NSIMS,))
+mass_offset = np.empty((NSIMS,4))
+
+for j in range(NSIMS):
+    for i in range(NSTEPS):
+        action, _states = model.predict(obs,deterministic=False) # sample at test time? ([TODO]: test)
+        obs, rewards, dones, info = env.step(action)
+        episode_reward += rewards
+        if dones:
+            print('episode_reward', episode_reward)
+            print('Final base position', info[0]['base_pos'])
+            mass_offset[j] = env.envs[0].env._add_base_mass_offset()
+            episode_reward = 0
 
     # [TODO] save data from current robot states for plots 
     # To get base position, for example: env.envs[0].env.robot.GetBasePosition() 
     # 
-    amplitudes[:,i] = env.envs[0].env._cpg.get_r()
-    phases[:,i] = env.envs[0].env._cpg.get_theta()
-    amplitudes_derivative[:,i] = env.envs[0].env._cpg.get_dr()
-    phases_derivative[:,i] = env.envs[0].env._cpg.get_dtheta()
+        base_lin_velocity = env.envs[0].env.robot.GetBaseLinearVelocity()
+        speed[i] = np.linalg.norm(base_lin_velocity[:2])
+        base_pos[:,i] = env.envs[0].env.robot.GetBasePosition()[0:2]
+
+        angular_lin_velocity = env.envs[0].env.robot.GetBaseAngularVelocity()
+        a_speed[i] = angular_lin_velocity[2]
+        distance[i], angle[i] = env.envs[0].env.get_distance_and_angle_to_goal()
+
+        _, FR_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(0)
+        FR[i,:] =  FR_pos
+        _, FL_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(1)
+        FL[i,:] =  FL_pos
+        _, RR_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(2)
+        RR[i,:] =  RR_pos
+        _, RL_pos = env.envs[0].env.robot.ComputeJacobianAndPosition(3)
+        RL[i,:] =  RL_pos
+
+        for tau,vel in zip(env.envs[0].env._dt_motor_torques,env.envs[0].env._dt_motor_velocities):
+            energy[j] += np.abs(np.dot(tau,vel)) * env.envs[0].env._time_step
     
 # [TODO] make plots:
 
-# PlOT_STEPS = int(1.2 // (TIME_STEP))
-# START_STEP = int(0 // (TIME_STEP))
-    
-PlOT_STEPS = 600
-START_STEP = 400
+# Linear Speed plot
+speed_mean = np.mean(speed)
+speed_std = np.std(speed)
 
-
-legID_Name = {0: "FR Leg", 1: "FL Leg", 2: "RR Leg", 3: "RL Leg"}
-
-# Create four subplots
-fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
-
-# Plot each vector in a separate subplot
-for i in range(4):
-    axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes[i, START_STEP:PlOT_STEPS], label=f'Amplitude $r$')
-    axes[i].plot(t[START_STEP:PlOT_STEPS], phases[i, START_STEP:PlOT_STEPS], label=f'Phase $\\theta$ ')
-    axes[i].plot(t[START_STEP:PlOT_STEPS], amplitudes_derivative[i, START_STEP:PlOT_STEPS], label=f'Amplitude Derivative $\\dot{{r}}$')
-    axes[i].plot(t[START_STEP:PlOT_STEPS], phases_derivative[i, START_STEP:PlOT_STEPS], label=f'Phase Derivative $\\dot{{\\theta}}$')
-    axes[i].set_ylabel(f'{legID_Name[i]}')
-
-axes[3].set_xlabel('Time')
+fig_speed, ax_speed = plt.subplots(figsize=(10, 4))
+ax_speed.plot(t, speed, label='Speed $v$')
+ax_speed.set_xlabel('Time')
+ax_speed.set_ylabel('Speed')
 plt.legend()
-plt.suptitle(f'CPG states ($r, \\theta, \\dot{{r}}, \\dot{{\\theta}}$)', fontsize=16)
+plt.title('Speed over Time')
+ax_speed.text(0.05, 0.95, f'Mean: {speed_mean:.2f} m/s\nStd: {speed_std:.2f} m/s', 
+        transform=ax_speed.transAxes, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.8))
+plt.show()
+
+# Angular Speed and angle plot
+fig_aspeed, ax_aspeed = plt.subplots(figsize=(10, 4))
+ax_aspeed.plot(t, a_speed, label='Angular Speed $v$')
+ax_aspeed.plot(t, angle, label='Angle $v$')
+ax_aspeed.set_xlabel('Time')
+plt.legend()
+plt.title('Angular Speed over Time')
+plt.show()
+
+#Foot positions
+plt.figure(figsize=(12, 18))
+# Plot for X dimension
+plt.subplot(3, 1, 1)
+plt.plot(t, FR[:, 0], label='FR X Position', color='red')
+plt.plot(t, FL[:, 0], label='FL X Position', color='blue')
+plt.plot(t, RR[:, 0], label='RR X Position', color='green')
+plt.plot(t, RL[:, 0], label='RL X Position', color='orange')
+plt.xlabel('Time')
+plt.ylabel('X Position')
+plt.title('Legs X Position Over Time')
+plt.legend()
+
+# Plot for Y dimension
+plt.subplot(3, 1, 2)
+plt.plot(t, FR[:, 1], label='FR Y Position', color='red')
+plt.plot(t, FL[:, 1], label='FL Y Position', color='blue')
+plt.plot(t, RR[:, 1], label='RR Y Position', color='green')
+plt.plot(t, RL[:, 1], label='RL Y Position', color='orange')
+plt.xlabel('Time')
+plt.ylabel('Y Position')
+plt.title('Legs Y Position Over Time')
+plt.legend()
+
+# Plot for Z dimension
+plt.subplot(3, 1, 3)
+plt.plot(t, FR[:, 2], label='FR Z Position', color='red')
+plt.plot(t, FL[:, 2], label='FL Z Position', color='blue')
+plt.plot(t, RR[:, 2], label='RR Z Position', color='green')
+plt.plot(t, RL[:, 2], label='RL Z Position', color='orange')
+plt.xlabel('Time')
+plt.ylabel('Z Position')
+plt.title('Legs Z Position Over Time')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+# COT computation:
+total_distance = np.zeros((NSIMS,))
+cot = np.empty((NSIMS,))
+
+g = 9.8 # in quadruped_gym_env.py
+m = sum(env.envs[0].env.robot.GetTotalMassFromURDF()) # in quadruped.py
+
+for i in range(NSIMS):
+
+    # distance computation
+    for step in range(NSIMS[i]-1):
+        total_distance[i] += np.linalg.norm(base_pos[:,step+1,i]-base_pos[:,step,i])
+
+    if speed_mean != 0:
+        cot[i] = energy[i]/(m*g*speed_mean)
+
+    if i == NSIMS:
+        print("cot mean", np.mean(cot))
+        print("cot std", np.std(cot))
+
+print("==========CoT Calculations:============")
+print("total_distance", total_distance)
+print("total_energy", energy)
+print("cot",cot)
+
+# Robustness plots
+fig = plt.figure()
+ax = fig.add_subplot(projection='3d')
+
+#sc = ax.scatter(mass_offset[:,0], mass_offset[:,1], mass_offset[:,2], s=5*mass_offset[:,3], c=last_step, cmap="tab20c_r", marker="s")
+
+ax.set_title(f'Impact of the mass distribution on the episode length over {NSIMS} iterations')
+ax.set_xlabel('X [m]')
+ax.set_ylabel('Y [m]')
+ax.set_zlabel('Z [m]')
+#cbar = fig.colorbar(sc, label="episode length")
+
 plt.show()

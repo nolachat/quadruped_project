@@ -46,7 +46,7 @@ from env.quadruped_gym_env import QuadrupedGymEnv
 
 
 LEARNING_ALG = "PPO" # or "SAC"
-LOAD_NN = True # if you want to initialize training with a previous model 
+LOAD_NN = False # if you want to initialize training with a previous model 
 NUM_ENVS = 1   # how many pybullet environments to create for data collection
 USE_GPU = False # make sure to install all necessary drivers 
 
@@ -68,12 +68,12 @@ else:
 
 if LOAD_NN:
     interm_dir = "./logs/intermediate_models/"
-    log_dir = interm_dir + 'rapport_speed07_1' # add path
+    log_dir = interm_dir + '2flagrun' # add path
     stats_path = os.path.join(log_dir, "vec_normalize.pkl")
     model_name = get_latest_model(log_dir)
 
 # directory to save policies and normalization parameters
-train_name = 'rapport_speed07_2'
+train_name = 'flagrun_prewardo'
 SAVE_PATH = './logs/intermediate_models/'+ train_name + '/'
 os.makedirs(SAVE_PATH, exist_ok=True)
 # checkpoint to save policy network periodically
